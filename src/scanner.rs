@@ -8,20 +8,6 @@ struct Scanner {
     line: usize,
 }
 
-fn handle_string<I>(iter: &mut Peekable<I>) -> (TokenType, String)
-where
-    I: Iterator<Item = char>,
-{
-    let mut chars = vec!['"'];
-    loop {
-        match iter.next() {
-            Some('"') => break (TokenType::STRING, String::from_iter(chars.into_iter())),
-            Some(char) => chars.push(char),
-            None => panic!("unterminated string"),
-        }
-    }
-}
-
 impl Scanner {
     pub fn new(source: &str) -> Self {
         Self {
@@ -49,48 +35,48 @@ impl Scanner {
 
         loop {
             let next = source.next();
-            if let Some(char) = next {
-                match char {
-                    '(' => sprse_tok(TokenType::LEFTPAREN, char),
-                    ')' => sprse_tok(TokenType::RIGHTPAREN, char),
-                    '{' => sprse_tok(TokenType::LEFTBRACE, char),
-                    '}' => sprse_tok(TokenType::RIGHTBRACE, char),
-                    ',' => sprse_tok(TokenType::COMMA, char),
-                    '.' => sprse_tok(TokenType::DOT, char),
-                    '-' => sprse_tok(TokenType::MINUS, char),
-                    '+' => sprse_tok(TokenType::PLUS, char),
-                    ';' => sprse_tok(TokenType::SEMICOLON, char),
-                    '*' => sprse_tok(TokenType::STAR, char),
+            if let Some(chr) = next {
+                match chr {
+                    '(' => sprse_tok(TokenType::LEFTPAREN, chr),
+                    ')' => sprse_tok(TokenType::RIGHTPAREN, chr),
+                    '{' => sprse_tok(TokenType::LEFTBRACE, chr),
+                    '}' => sprse_tok(TokenType::RIGHTBRACE, chr),
+                    ',' => sprse_tok(TokenType::COMMA, chr),
+                    '.' => sprse_tok(TokenType::DOT, chr),
+                    '-' => sprse_tok(TokenType::MINUS, chr),
+                    '+' => sprse_tok(TokenType::PLUS, chr),
+                    ';' => sprse_tok(TokenType::SEMICOLON, chr),
+                    '*' => sprse_tok(TokenType::STAR, chr),
                     '!' => {
                         if source.peek().unwrap() == &'=' {
                             source.next();
-                            sprse_tok(TokenType::BANGEQUAL, char)
+                            sprse_tok(TokenType::BANGEQUAL, chr)
                         } else {
-                            sprse_tok(TokenType::BANG, char)
+                            sprse_tok(TokenType::BANG, chr)
                         }
                     }
                     '=' => {
                         if source.peek().unwrap() == &'=' {
                             source.next();
-                            sprse_tok(TokenType::EQUALEQUAL, char)
+                            sprse_tok(TokenType::EQUALEQUAL, chr)
                         } else {
-                            sprse_tok(TokenType::EQUAL, char)
+                            sprse_tok(TokenType::EQUAL, chr)
                         }
                     }
                     '<' => {
                         if source.peek().unwrap() == &'=' {
                             source.next();
-                            sprse_tok(TokenType::LESSEQUAL, char)
+                            sprse_tok(TokenType::LESSEQUAL, chr)
                         } else {
-                            sprse_tok(TokenType::LESSEQUAL, char)
+                            sprse_tok(TokenType::LESSEQUAL, chr)
                         }
                     }
                     '>' => {
                         if source.peek().unwrap() == &'=' {
                             source.next();
-                            sprse_tok(TokenType::GREATEREQUAL, char)
+                            sprse_tok(TokenType::GREATEREQUAL, chr)
                         } else {
-                            sprse_tok(TokenType::GREATER, char)
+                            sprse_tok(TokenType::GREATER, chr)
                         }
                     }
                     '/' => {
@@ -108,20 +94,55 @@ impl Scanner {
                             }
                             self.line += 1; // if its a comment then scanner consumes the \n
                         } else {
-                            sprse_tok(TokenType::SLASH, char)
+                            sprse_tok(TokenType::SLASH, chr)
                         }
                     }
                     '"' => {
-                        let (token, lit) = handle_string(&mut source);
-                        let mut buf = [0; 1];
-                        full_tok(token, char.encode_utf8(&mut buf).into(), lit);
+                        let mut chars = vec!['"'];
+                        let (token, lit) = loop {
+                            match source.next() {
+                                Some('"') => {
+                                    break (TokenType::STRING, String::from_iter(chars[1..].iter()))
+                                }
+                                Some(char) => chars.push(char),
+                                None => panic!("unterminated string"),
+                            }
+                        };
+                        chars.push('"');
+                        full_tok(token, String::from_iter(chars.into_iter()), lit);
                     }
-                    ' ' => (),
+                    _ if chr.is_digit(10) => {
+                        let mut num = vec![chr];
+                        loop {
+                            match source.peek() {
+                                Some(char) if char.is_digit(10) || char.eq(&'.') => {
+                                    num.push(source.next().unwrap())
+                                }
+                                Some(_) => break,
+                                None => full_tok(TokenType::EOF, "".into(), "".into()),
+                            }
+                        }
+                        let lit = String::from_iter(num.into_iter());
+                        full_tok(TokenType::NUMBER, lit.clone(), lit)
+                    }
                     '\r' => (),
                     '\t' => (),
                     '\n' => {
                         self.line += 1;
                     }
+                    _ if chr.is_alphabetic() => {
+                        let mut ident = vec![chr];
+                        loop {
+                            match source.peek() {
+                                Some(char) if char.is_alphabetic() || char.eq(&'_') => {
+                                    ident.push(source.next().unwrap())
+                                }
+                                Some(_) => break,
+                                None => full_tok(TokenType::EOF, "".into(), "".into()),
+                            }
+                        }
+                    }
+                    ' ' => (),
                     _ => panic!("unexpected character"),
                 };
             } else {
