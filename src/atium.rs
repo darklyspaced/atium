@@ -6,6 +6,8 @@ use std::{
 use clap::Parser;
 use color_eyre::{eyre::Context, Result};
 
+use super::scanner::Scanner;
+
 #[derive(Parser)]
 #[command(author, version, about)]
 pub struct Atium {
@@ -23,17 +25,21 @@ pub fn run_file(file: &str) -> Result<()> {
 }
 
 pub fn run_repl() -> Result<()> {
-    loop {
+    print!("> ");
+    let mut input = stdin().lock();
+    let mut buf = String::new();
+    while input.read_line(&mut buf)? != 0 {
         print!("> ");
-        for line in stdin().lock().lines() {
-            run(line?);
-        }
+        run(buf.clone())
     }
+    Ok(())
 }
 
 fn run(program: String) {
-    println!("{program}");
-    todo!("implement the run function")
+    println!("bye");
+    let mut scanner = Scanner::new(program);
+    scanner.scan_tokens();
+    println!("{:#?}", scanner.tokens);
 }
 
 pub fn error(line: usize, message: &str) {
