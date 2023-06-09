@@ -25,11 +25,9 @@ pub fn run_file(file: &str) -> Result<()> {
 }
 
 pub fn run_repl() -> Result<()> {
-    print!("> ");
     let mut input = stdin().lock();
     let mut buf = String::new();
     while input.read_line(&mut buf)? != 0 {
-        print!("> ");
         run(buf.clone())
     }
     Ok(())

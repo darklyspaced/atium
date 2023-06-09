@@ -1,3 +1,4 @@
+use std::{fmt, fmt::Display};
 #[derive(Clone, Debug)]
 /// A token
 pub struct Token {
@@ -19,6 +20,12 @@ impl Token {
             literal,
             line,
         }
+    }
+}
+
+impl Display for Token {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.literal)
     }
 }
 
