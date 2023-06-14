@@ -1,15 +1,15 @@
 use std::{fmt, fmt::Display};
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 /// A token
 pub struct Token {
     /// The type of token represented by the struct whether that be a STRING or a CLASS
-    token_type: TokenType,
+    pub token_type: TokenType,
     /// The textual representation of the `Token`: "\"cat\""
-    lexeme: String,
+    pub lexeme: String,
     /// The value represented by a literal: "cat"
-    literal: String,
+    pub literal: String,
     /// The line that the token is on
-    line: usize,
+    pub line: usize,
 }
 
 impl Token {
@@ -24,12 +24,12 @@ impl Token {
 }
 
 impl Display for Token {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.literal)
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.lexeme)
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
     // Single-character tokens.
     LeftParen,

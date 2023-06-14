@@ -3,6 +3,7 @@ use std::{
     io::{stdin, BufRead, BufReader, Read},
 };
 
+use super::parser;
 use clap::Parser;
 use color_eyre::{eyre::Context, Result};
 
@@ -34,10 +35,12 @@ pub fn run_repl() -> Result<()> {
 }
 
 fn run(program: String) {
-    println!("bye");
     let mut scanner = Scanner::new(program);
     scanner.scan_tokens();
-    println!("{:#?}", scanner.tokens);
+    let mut parser = parser::Parser::new(scanner.tokens.clone());
+    println!("{}", parser.expression().unwrap());
+    // println!("{:#?}", scanner.tokens);
+    // println!("{:#?}", scanner.tokens);
 }
 
 pub fn error(line: usize, message: &str) {
