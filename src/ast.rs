@@ -1,4 +1,6 @@
-use super::token::Token;
+use color_eyre::Result;
+
+use super::token::{Token, Type};
 use std::fmt;
 
 pub enum Expr {

@@ -1,19 +1,27 @@
 use std::{fmt, fmt::Display};
 #[derive(Clone, Debug, PartialEq)]
+
 /// A token
 pub struct Token {
     /// The type of token represented by the struct whether that be a STRING or a CLASS
     pub token_type: TokenType,
-    /// The textual representation of the `Token`: "\"cat\""
+    /// The textual representation of the `Token`: "cat"
     pub lexeme: String,
-    /// The value represented by a literal: "cat"
-    pub literal: String,
+    /// The value represented by a literal: cat
+    pub literal: Option<Type>,
     /// The line that the token is on
     pub line: usize,
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum Type {
+    String(String),
+    Integer(i64),
+    Boolean(bool),
+}
+
 impl Token {
-    pub fn new(token_type: TokenType, lexeme: String, literal: String, line: usize) -> Self {
+    pub fn new(token_type: TokenType, lexeme: String, literal: Option<Type>, line: usize) -> Self {
         Self {
             token_type,
             lexeme,

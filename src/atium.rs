@@ -38,9 +38,7 @@ fn run(program: String) {
     let mut scanner = Scanner::new(program);
     scanner.scan_tokens();
     let mut parser = parser::Parser::new(scanner.tokens.clone());
-    println!("{}", parser.expression().unwrap());
-    // println!("{:#?}", scanner.tokens);
-    // println!("{:#?}", scanner.tokens);
+    println!("{}", parser.parse().unwrap());
 }
 
 pub fn error(line: usize, message: &str) {
