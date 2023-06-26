@@ -145,7 +145,7 @@ impl<'a> Scanner<'a> {
                             }
                         }
                         let lit = num.into_iter().collect::<String>();
-                        let int_lit = lit.clone().parse::<i64>().unwrap();
+                        let int_lit = lit.clone().parse::<f64>().unwrap();
 
                         add_tok(Number, lit, Some(Type::Integer(int_lit)));
                     }

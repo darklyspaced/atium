@@ -16,7 +16,7 @@ pub struct Token {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Type {
     String(String),
-    Integer(i64),
+    Integer(f64),
     Boolean(bool),
 }
 
