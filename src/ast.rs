@@ -25,7 +25,7 @@ impl fmt::Display for Expr {
     }
 }
 
-fn compute(expr: Expr) -> Type {
+pub fn compute(expr: Expr) -> Type {
     match expr {
         Expr::Literal(lit) => lit.literal.unwrap(),
         Expr::Grouping(expr) => compute(*expr),
@@ -73,7 +73,7 @@ fn compute(expr: Expr) -> Type {
                 }
                 TokenType::Plus => {
                     if let (Type::Integer(a), Type::Integer(b)) = (&left, &right) {
-                        return Type::Integer(a * b);
+                        return Type::Integer(a + b);
                     } else {
                         if let (Type::String(a), Type::String(b)) = (&left, &right) {
                             return Type::String(a.clone() + b);

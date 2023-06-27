@@ -36,9 +36,12 @@ pub fn run_repl() -> Result<()> {
 
 fn run(program: String) {
     let mut scanner = Scanner::new(program);
-    scanner.scan_tokens();
+    if let Err(e) = scanner.scan_tokens() {
+        println!("{}", e);
+    }
     let mut parser = parser::Parser::new(scanner.tokens.clone());
-    println!("{}", parser.parse().unwrap());
+    let ans = crate::ast::compute(parser.expression().unwrap());
+    println!("{ans:?}");
 }
 
 pub fn error(line: usize, message: &str) {

@@ -1,18 +1,29 @@
-use std::collections::HashMap;
+use super::error::SyntaxError;
+use color_eyre::Result;
 
 use super::token::{Token, TokenType, Type};
 use std::char;
+use std::collections::HashMap;
 use TokenType::*;
 
+/// Scanner contains all the machinery that allows a it to convert a stream of bytes into a stream
+/// of tokens that can then be parsed into expressions.
+///
+/// The source code is converted into an iterator of characters, from which tokens are identified
+/// and added to the vector of tokens. Only produces syntax errors.
 #[derive(Default)]
 pub struct Scanner<'a> {
+    /// Source code
     src: String,
     pub tokens: Vec<Token>,
+    /// reserved keywords for the Rlox Language
     reserved: HashMap<&'a str, TokenType>,
+    /// line that the scanner is currently lexing
     line: usize,
 }
 
 impl<'a> Scanner<'a> {
+    /// Constructor for a Scanner
     pub fn new(source: String) -> Self {
         Self {
             src: source,
@@ -39,14 +50,13 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    pub fn scan_tokens(&mut self) {
+    pub fn scan_tokens(&mut self) -> Result<()> {
         fn ctos(char: char) -> String {
             let vector = vec![char];
             vector.into_iter().collect()
         }
 
         let mut source = self.src.chars().peekable();
-
         let mut add_tok = |tt, lex, lit| {
             let token: Token = Token::new(tt, lex, lit, 0);
             self.tokens.push(token);
@@ -173,7 +183,7 @@ impl<'a> Scanner<'a> {
                         }
                     }
                     ' ' => (),
-                    _ => panic!("unexpected character: {}", chr),
+                    _ => return Err(SyntaxError::UnexpectedCharacter(chr).into()),
                 };
             } else {
                 self.tokens
@@ -181,5 +191,6 @@ impl<'a> Scanner<'a> {
                 break;
             }
         }
+        Ok(())
     }
 }

@@ -8,6 +8,7 @@
 )]
 pub mod ast;
 pub mod atium;
+pub mod error;
 pub mod parser;
 pub mod scanner;
 pub mod token;
