@@ -4,7 +4,7 @@ use super::token::{TokenType, Type};
 
 use color_eyre::Result;
 
-pub fn compute(expr: Expr) -> Result<Type> {
+pub fn interpret(expr: Expr) -> Result<Type> {
     match expr {
         Expr::Literal(lit) => Ok(lit.literal.unwrap()),
         Expr::Grouping(expr) => compute(*expr),
@@ -65,7 +65,7 @@ pub fn compute(expr: Expr) -> Result<Type> {
                     )
                     .into()),
                 },
-                _ => panic!("operator other than +, /, - or * found in binary expression"),
+                _ => Err(RuntimeError::InvalidOperator(op.lexeme, vec!['+', '/', '-', '*']).into()),
             }
         }
     }

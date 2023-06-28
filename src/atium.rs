@@ -1,13 +1,13 @@
+use clap::Parser;
+use color_eyre::{eyre::Context, Result};
+
+use super::interpreter::interpret;
+use super::parser;
+use super::scanner::Scanner;
 use std::{
     fs::File,
     io::{stdin, BufRead, BufReader, Read},
 };
-
-use super::parser;
-use clap::Parser;
-use color_eyre::{eyre::Context, Result};
-
-use super::scanner::Scanner;
 
 #[derive(Parser)]
 #[command(author, version, about)]
@@ -40,14 +40,6 @@ fn run(program: String) {
         println!("{}", e);
     }
     let mut parser = parser::Parser::new(scanner.tokens.clone());
-    let ans = crate::ast::compute(parser.expression().unwrap());
+    let ans = interpret(parser.expression().unwrap());
     println!("{ans:?}");
-}
-
-pub fn error(line: usize, message: &str) {
-    report(line, "", message);
-}
-
-fn report(line: usize, location: &str, message: &str) {
-    eprintln!("[line: {}] Error{}: {}", line, location, message);
 }
