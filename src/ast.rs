@@ -1,6 +1,13 @@
 use super::token::Token;
 use std::fmt;
 
+/// The base building blocks of the language
+pub enum Stmt {
+    Expr(Expr),
+    Print(Expr),
+}
+
+/// An expression: something that can be evalutated and always produces a result
 pub enum Expr {
     Binary(Box<Expr>, Token, Box<Expr>),
     Grouping(Box<Expr>),
@@ -24,5 +31,3 @@ impl fmt::Display for Expr {
         }
     }
 }
-
-pub enum Stmt {}
