@@ -40,6 +40,8 @@ fn run(src: String) {
         println!("{}", e);
     }
     let mut parser = parser::Parser::new(scanner.tokens.clone());
-    let ans = interpret(parser.parse().unwrap());
-    println!("{ans:?}");
+    let errs = interpret(parser.parse().unwrap());
+    if !errs.is_empty() {
+        println!("{:?}", errs)
+    }
 }

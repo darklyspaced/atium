@@ -1,10 +1,7 @@
 use thiserror::Error;
 
 use crate::token::Type;
-use std::{
-    fmt,
-    fmt::{Debug, Write},
-};
+use std::{fmt, fmt::Write};
 
 /// Error that can be generated during the lexing phase of the interpreter.
 #[derive(Error, Debug)]
@@ -21,17 +18,28 @@ pub enum RuntimeError {
     InvalidOperator(String, Vec<char>),
     #[error("an invalid type was found: {0}; expected: {}", display_vec(.1))]
     InvalidType(Type, Vec<Type>),
-    #[error("cannot apply {0} to values ({}); expected: {}", display_vec(.1), display_vec(.2))]
-    InvalidTypes(String, Vec<Type>, Vec<Type>),
+    #[error("cannot apply {0} to values ({}); expected: {}", display_vec(.1), display_tuple_vec(.2))]
+    InvalidTypes(String, Vec<Type>, Vec<(Type, Type)>),
 }
 
 fn display_vec<'a, T>(vec: &Vec<T>) -> String
 where
-    T: Debug,
+    T: fmt::Debug,
 {
     let mut buffer = String::new();
     write!(&mut buffer, "{:?}", vec).unwrap();
     String::from(&buffer[1..buffer.len() - 1])
+}
+
+fn display_tuple_vec<'a, T>(vec: &Vec<(T, T)>) -> String
+where
+    T: fmt::Debug,
+{
+    let mut buffer = format!("{:?}", vec[0]);
+    for tup in 1..vec.len() {
+        buffer.push_str(&format!(" or {:?}", tup))
+    }
+    buffer
 }
 
 impl fmt::Display for Type {

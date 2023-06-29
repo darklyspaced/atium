@@ -4,7 +4,7 @@ use super::token::{TokenType, Type, Value};
 
 use color_eyre::Result;
 
-pub fn interpret(stmts: Vec<Stmt>) -> Vec<Option<color_eyre::Report>> {
+pub fn interpret(stmts: Vec<Stmt>) -> Vec<color_eyre::Report> {
     let mut errors = Vec::new();
     for stmt in stmts {
         match stmt {
@@ -12,7 +12,11 @@ pub fn interpret(stmts: Vec<Stmt>) -> Vec<Option<color_eyre::Report>> {
             Stmt::Print(expr) => errors.push(print(expr).err()),
         };
     }
-    errors.into_iter().filter(|opt| opt.is_some()).collect()
+    errors
+        .into_iter()
+        .filter(|opt| opt.is_some())
+        .map(|e| e.unwrap())
+        .collect()
 }
 
 fn expression(expr: Expr) -> Result<Value> {
@@ -44,7 +48,7 @@ fn expression(expr: Expr) -> Result<Value> {
                     _ => Err(RuntimeError::InvalidTypes(
                         op.lexeme,
                         vec![left.into(), right.into()],
-                        vec![Type::Integer],
+                        vec![(Type::Integer, Type::Integer)],
                     )
                     .into()),
                 },
@@ -53,7 +57,7 @@ fn expression(expr: Expr) -> Result<Value> {
                     _ => Err(RuntimeError::InvalidTypes(
                         op.lexeme,
                         vec![left.into(), right.into()],
-                        vec![Type::Integer],
+                        vec![(Type::Integer, Type::Integer)],
                     )
                     .into()),
                 },
@@ -62,7 +66,7 @@ fn expression(expr: Expr) -> Result<Value> {
                     _ => Err(RuntimeError::InvalidTypes(
                         op.lexeme,
                         vec![left.into(), right.into()],
-                        vec![Type::Integer],
+                        vec![(Type::Integer, Type::Integer)],
                     )
                     .into()),
                 },
@@ -72,7 +76,7 @@ fn expression(expr: Expr) -> Result<Value> {
                     _ => Err(RuntimeError::InvalidTypes(
                         op.lexeme,
                         vec![left.into(), right.into()],
-                        vec![Type::Integer],
+                        vec![(Type::Integer, Type::Integer), (Type::String, Type::String)],
                     )
                     .into()),
                 },
