@@ -8,20 +8,40 @@ pub struct Token {
     /// The textual representation of the `Token`: "cat"
     pub lexeme: String,
     /// The value represented by a literal: cat
-    pub literal: Option<Type>,
+    pub literal: Option<Value>,
     /// The line that the token is on
     pub line: usize,
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum Type {
+pub enum Value {
     String(String),
     Integer(f64),
     Boolean(bool),
+    Null,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum Type {
+    String,
+    Integer,
+    Boolean,
+    Null,
+}
+
+impl From<Value> for Type {
+    fn from(value: Value) -> Self {
+        match value {
+            Value::String(_) => Self::String,
+            Value::Integer(_) => Self::Integer,
+            Value::Boolean(_) => Self::Boolean,
+            Value::Null => Self::Null,
+        }
+    }
 }
 
 impl Token {
-    pub fn new(token_type: TokenType, lexeme: String, literal: Option<Type>, line: usize) -> Self {
+    pub fn new(token_type: TokenType, lexeme: String, literal: Option<Value>, line: usize) -> Self {
         Self {
             token_type,
             lexeme,
@@ -37,9 +57,14 @@ impl Display for Token {
     }
 }
 
-impl Display for Type {
+impl Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self)
+        match self {
+            Self::String(a) => write!(f, "{}", a),
+            Self::Integer(a) => write!(f, "{}", a),
+            Self::Boolean(a) => write!(f, "{}", a),
+            Self::Null => write!(f, "Null"),
+        }
     }
 }
 

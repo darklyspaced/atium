@@ -1,5 +1,6 @@
 use super::{
-    ast::Expr,
+    ast::{Expr, Stmt},
+    error::SyntaxError,
     token::{Token, TokenType},
 };
 use std::{iter::Peekable, vec::IntoIter};
@@ -13,14 +14,6 @@ impl Parser {
         Self {
             iter: tokens.into_iter().peekable(),
         }
-    }
-
-    pub fn parse(&mut self) -> Option<Expr> {
-        self.expression()
-    }
-
-    pub fn expression(&mut self) -> Option<Expr> {
-        self.equality()
     }
 
     /// Prevents error cascading (one error causing a bunch of other ones later in the program)
@@ -53,9 +46,46 @@ impl Parser {
         Some(())
     }
 
+    /// Converts a stream of tokens into an abstract syntax tree that can be interpreted
+    pub fn parse(&mut self) -> Option<Vec<Stmt>> {
+        let mut statements: Vec<Stmt> = vec![];
+        let mut next = self.iter.peek()?.clone();
+
+        loop {
+            match next.token_type {
+                TokenType::Print => statements.push({
+                    self.iter.next(); // consume print token
+                    let print = Stmt::Print(self.expression()?); // consume argument to print
+                    let semi = self.iter.next()?; // expecting semicolon
+                    if semi.token_type != TokenType::Semicolon {
+                        println!(
+                            "{}",
+                            SyntaxError::ExpectedCharacter(next.lexeme.clone(), ';')
+                        );
+                        return None;
+                    }
+                    next = self.iter.peek()?.clone();
+                    print
+                }),
+                TokenType::EOF => break,
+                _ => {
+                    let expression = self.expression()?;
+                    statements.push(Stmt::Expr(expression));
+                    next = self.iter.peek()?.clone();
+                }
+            }
+        }
+
+        Some(statements)
+    }
+
+    fn expression(&mut self) -> Option<Expr> {
+        self.equality()
+    }
+
     fn equality(&mut self) -> Option<Expr> {
         let mut left = self.comparison()?;
-        let mut next = self.iter.peek().unwrap();
+        let mut next = self.iter.peek()?;
 
         loop {
             match next.token_type {
@@ -82,7 +112,6 @@ impl Parser {
                 | TokenType::GreaterEqual
                 | TokenType::Less
                 | TokenType::LessEqual => {
-                    println!("comparison");
                     let operator = self.iter.next()?;
                     let right = self.term()?;
                     left = Expr::Binary(Box::new(left), operator, Box::new(right));
@@ -154,7 +183,7 @@ impl Parser {
 
     /// Resolves into a [`Expr::Literal`] that represents, you guessed it, a literal.
     fn primary(&mut self) -> Option<Expr> {
-        let next = self.iter.peek().unwrap();
+        let next = self.iter.peek()?;
 
         match next.token_type {
             TokenType::False

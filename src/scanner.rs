@@ -1,7 +1,7 @@
 use super::error::SyntaxError;
 use color_eyre::Result;
 
-use super::token::{Token, TokenType, Type};
+use super::token::{Token, TokenType, Value};
 use std::char;
 use std::collections::HashMap;
 use TokenType::*;
@@ -140,7 +140,7 @@ impl<'a> Scanner<'a> {
                         add_tok(
                             token,
                             chars.into_iter().collect::<String>(),
-                            Some(Type::String(lit)),
+                            Some(Value::String(lit)),
                         );
                     }
                     _ if chr.is_ascii_digit() => {
@@ -157,7 +157,7 @@ impl<'a> Scanner<'a> {
                         let lit = num.into_iter().collect::<String>();
                         let int_lit = lit.clone().parse::<f64>().unwrap();
 
-                        add_tok(Number, lit, Some(Type::Integer(int_lit)));
+                        add_tok(Number, lit, Some(Value::Integer(int_lit)));
                     }
                     '\r' | '\t' => (),
                     '\n' => {

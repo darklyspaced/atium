@@ -34,12 +34,12 @@ pub fn run_repl() -> Result<()> {
     Ok(())
 }
 
-fn run(program: String) {
-    let mut scanner = Scanner::new(program);
+fn run(src: String) {
+    let mut scanner = Scanner::new(src);
     if let Err(e) = scanner.scan_tokens() {
         println!("{}", e);
     }
     let mut parser = parser::Parser::new(scanner.tokens.clone());
-    let ans = interpret(parser.expression().unwrap());
+    let ans = interpret(parser.parse().unwrap());
     println!("{ans:?}");
 }

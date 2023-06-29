@@ -1,67 +1,78 @@
-use super::ast::Expr;
+use super::ast::{Expr, Stmt};
 use super::error::RuntimeError;
-use super::token::{TokenType, Type};
+use super::token::{TokenType, Type, Value};
 
 use color_eyre::Result;
 
-pub fn interpret(expr: Expr) -> Result<Type> {
+pub fn interpret(stmts: Vec<Stmt>) -> Vec<Option<color_eyre::Report>> {
+    let mut errors = Vec::new();
+    for stmt in stmts {
+        match stmt {
+            Stmt::Expr(expr) => errors.push(expression(expr).err()),
+            Stmt::Print(expr) => errors.push(print(expr).err()),
+        };
+    }
+    errors.into_iter().filter(|opt| opt.is_some()).collect()
+}
+
+fn expression(expr: Expr) -> Result<Value> {
     match expr {
         Expr::Literal(lit) => Ok(lit.literal.unwrap()),
-        Expr::Grouping(expr) => compute(*expr),
+        Expr::Grouping(expr) => expression(*expr),
         Expr::Unary(op, expr) => {
-            let expr = compute(*expr)?;
+            let expr = expression(*expr)?;
 
             match op.token_type {
                 TokenType::Minus => match expr {
-                    Type::Integer(a) => Ok(Type::Integer(-a)),
-                    _ => Err(RuntimeError::InvalidType(expr, vec![Type::Integer(0.0)]).into()),
+                    Value::Integer(a) => Ok(Value::Integer(-a)),
+                    _ => Err(RuntimeError::InvalidType(expr.into(), vec![Type::Integer]).into()),
                 },
                 TokenType::Bang => match expr {
-                    Type::Boolean(a) => Ok(Type::Boolean(!a)),
-                    _ => Err(RuntimeError::InvalidType(expr, vec![Type::Boolean(false)]).into()),
+                    Value::Boolean(a) => Ok(Value::Boolean(!a)),
+                    _ => Err(RuntimeError::InvalidType(expr.into(), vec![Type::Boolean]).into()),
                 },
                 _ => Err(RuntimeError::InvalidOperator(op.lexeme, vec!['-', '!']).into()),
             }
         }
         Expr::Binary(left, op, right) => {
-            let left = compute(*left)?;
-            let right = compute(*right)?;
+            let left = expression(*left)?;
+            let right = expression(*right)?;
 
             match op.token_type {
                 TokenType::Slash => match (&left, &right) {
-                    (Type::Integer(a), Type::Integer(b)) => Ok(Type::Integer(a / b)),
+                    (Value::Integer(a), Value::Integer(b)) => Ok(Value::Integer(a / b)),
                     _ => Err(RuntimeError::InvalidTypes(
                         op.lexeme,
-                        vec![left, right],
-                        vec![Type::Integer(0.0)],
+                        vec![left.into(), right.into()],
+                        vec![Type::Integer],
                     )
                     .into()),
                 },
                 TokenType::Minus => match (&left, &right) {
-                    (Type::Integer(a), Type::Integer(b)) => Ok(Type::Integer(a - b)),
+                    (Value::Integer(a), Value::Integer(b)) => Ok(Value::Integer(a - b)),
                     _ => Err(RuntimeError::InvalidTypes(
                         op.lexeme,
-                        vec![left, right],
-                        vec![Type::Integer(0.0)],
+                        vec![left.into(), right.into()],
+                        vec![Type::Integer],
                     )
                     .into()),
                 },
                 TokenType::Star => match (&left, &right) {
-                    (Type::Integer(a), Type::Integer(b)) => Ok(Type::Integer(a * b)),
+                    (Value::Integer(a), Value::Integer(b)) => Ok(Value::Integer(a * b)),
                     _ => Err(RuntimeError::InvalidTypes(
                         op.lexeme,
-                        vec![left, right],
-                        vec![Type::Integer(0.0)],
+                        vec![left.into(), right.into()],
+                        vec![Type::Integer],
                     )
                     .into()),
                 },
                 TokenType::Plus => match (&left, &right) {
-                    (Type::Integer(a), Type::Integer(b)) => Ok(Type::Integer(a + b)),
-                    (Type::String(a), Type::String(b)) => Ok(Type::String(a.to_owned() + b)),
+                    (Value::Integer(a), Value::Integer(b)) => Ok(Value::Integer(a + b)),
+                    (Value::String(a), Value::String(b)) => Ok(Value::String(a.to_owned() + b)),
                     _ => Err(RuntimeError::InvalidTypes(
                         op.lexeme,
-                        vec![left, right],
-                        vec![Type::Integer(0.0)],
+                        vec![left.into(), right.into()],
+                        vec![Type::Integer],
                     )
                     .into()),
                 },
@@ -69,4 +80,9 @@ pub fn interpret(expr: Expr) -> Result<Type> {
             }
         }
     }
+}
+
+fn print(expr: Expr) -> Result<()> {
+    println!("{}", expression(expr)?);
+    Ok(())
 }
