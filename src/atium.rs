@@ -42,6 +42,8 @@ fn run(src: String) {
     let mut parser = parser::Parser::new(scanner.tokens.clone());
     let errs = interpret(parser.parse().unwrap());
     if !errs.is_empty() {
-        println!("{:?}", errs)
+        for err in errs {
+            println!("{err}");
+        }
     }
 }

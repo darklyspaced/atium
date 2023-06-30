@@ -177,7 +177,15 @@ impl<'a> Scanner<'a> {
                         let ident = ident.into_iter().collect::<String>();
                         if self.reserved.contains_key::<str>(&ident) {
                             let tt = self.reserved.get::<str>(&ident).unwrap();
-                            add_tok(tt.clone(), ident, None);
+                            match tt {
+                                TokenType::True => {
+                                    add_tok(tt.clone(), ident, Some(Value::Boolean(true)))
+                                }
+                                TokenType::False => {
+                                    add_tok(tt.clone(), ident, Some(Value::Boolean(false)))
+                                }
+                                _ => add_tok(tt.clone(), ident, None),
+                            }
                         } else {
                             add_tok(Identifier, ident, None);
                         }
@@ -191,6 +199,7 @@ impl<'a> Scanner<'a> {
                 break;
             }
         }
+        // dbg!(&self.tokens);
         Ok(())
     }
 }

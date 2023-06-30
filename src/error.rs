@@ -37,7 +37,7 @@ where
 {
     let mut buffer = format!("{:?}", vec[0]);
     for tup in 1..vec.len() {
-        buffer.push_str(&format!(" or {:?}", tup))
+        buffer.push_str(&format!(" or {:?}", vec[tup]))
     }
     buffer
 }
