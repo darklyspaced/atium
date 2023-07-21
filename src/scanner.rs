@@ -2,7 +2,6 @@ use super::error::SyntaxError;
 use color_eyre::Result;
 
 use super::token::{Token, TokenType, Value};
-use std::char;
 use std::collections::HashMap;
 use TokenType::*;
 
@@ -15,6 +14,7 @@ use TokenType::*;
 pub struct Scanner<'a> {
     /// Source code
     src: String,
+    /// Tokens present in source code
     pub tokens: Vec<Token>,
     /// reserved keywords for the Rlox Language
     reserved: HashMap<&'a str, TokenType>,
@@ -51,11 +51,6 @@ impl<'a> Scanner<'a> {
     }
 
     pub fn scan_tokens(&mut self) -> Result<()> {
-        fn ctos(char: char) -> String {
-            let vector = vec![char];
-            vector.into_iter().collect()
-        }
-
         let mut source = self.src.chars().peekable();
         let mut add_tok = |tt, lex, lit| {
             let token: Token = Token::new(tt, lex, lit, 0);
@@ -66,46 +61,46 @@ impl<'a> Scanner<'a> {
             let next = source.next();
             if let Some(chr) = next {
                 match chr {
-                    '(' => add_tok(LeftParen, ctos(chr), None),
-                    ')' => add_tok(RightParen, ctos(chr), None),
-                    '{' => add_tok(LeftBrace, ctos(chr), None),
-                    '}' => add_tok(RightBrace, ctos(chr), None),
-                    ',' => add_tok(Comma, ctos(chr), None),
-                    '.' => add_tok(Dot, ctos(chr), None),
-                    '-' => add_tok(Minus, ctos(chr), None),
-                    '+' => add_tok(Plus, ctos(chr), None),
-                    ';' => add_tok(Semicolon, ctos(chr), None),
-                    '*' => add_tok(Star, ctos(chr), None),
+                    '(' => add_tok(LeftParen, chr.to_string(), None),
+                    ')' => add_tok(RightParen, chr.to_string(), None),
+                    '{' => add_tok(LeftBrace, chr.to_string(), None),
+                    '}' => add_tok(RightBrace, chr.to_string(), None),
+                    ',' => add_tok(Comma, chr.to_string(), None),
+                    '.' => add_tok(Dot, chr.to_string(), None),
+                    '-' => add_tok(Minus, chr.to_string(), None),
+                    '+' => add_tok(Plus, chr.to_string(), None),
+                    ';' => add_tok(Semicolon, chr.to_string(), None),
+                    '*' => add_tok(Star, chr.to_string(), None),
                     '!' => {
                         if source.peek().unwrap() == &'=' {
                             source.next();
-                            add_tok(BangEqual, ctos(chr), None);
+                            add_tok(BangEqual, chr.to_string(), None);
                         } else {
-                            add_tok(Bang, ctos(chr), None);
+                            add_tok(Bang, chr.to_string(), None);
                         }
                     }
                     '=' => {
                         if source.peek().unwrap() == &'=' {
                             source.next();
-                            add_tok(EqualEqual, ctos(chr), None);
+                            add_tok(EqualEqual, chr.to_string(), None);
                         } else {
-                            add_tok(Equal, ctos(chr), None);
+                            add_tok(Equal, chr.to_string(), None);
                         }
                     }
                     '<' => {
                         if source.peek().unwrap() == &'=' {
                             source.next();
-                            add_tok(LessEqual, ctos(chr), None);
+                            add_tok(LessEqual, chr.to_string(), None);
                         } else {
-                            add_tok(Less, ctos(chr), None);
+                            add_tok(Less, chr.to_string(), None);
                         }
                     }
                     '>' => {
                         if source.peek().unwrap() == &'=' {
                             source.next();
-                            add_tok(GreaterEqual, ctos(chr), None);
+                            add_tok(GreaterEqual, chr.to_string(), None);
                         } else {
-                            add_tok(Greater, ctos(chr), None);
+                            add_tok(Greater, chr.to_string(), None);
                         }
                     }
                     '/' => {
@@ -124,7 +119,7 @@ impl<'a> Scanner<'a> {
                             }
                             self.line += 1; // if its a comment then scanner consumes the \n
                         } else {
-                            add_tok(Slash, ctos(chr), None);
+                            add_tok(Slash, chr.to_string(), None);
                         }
                     }
                     '"' => {
@@ -179,10 +174,10 @@ impl<'a> Scanner<'a> {
                             let tt = self.reserved.get::<str>(&ident).unwrap();
                             match tt {
                                 TokenType::True => {
-                                    add_tok(tt.clone(), ident, Some(Value::Boolean(true)))
+                                    add_tok(tt.clone(), ident, Some(Value::Boolean(true)));
                                 }
                                 TokenType::False => {
-                                    add_tok(tt.clone(), ident, Some(Value::Boolean(false)))
+                                    add_tok(tt.clone(), ident, Some(Value::Boolean(false)));
                                 }
                                 _ => add_tok(tt.clone(), ident, None),
                             }
@@ -199,7 +194,6 @@ impl<'a> Scanner<'a> {
                 break;
             }
         }
-        // dbg!(&self.tokens);
         Ok(())
     }
 }

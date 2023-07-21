@@ -3,7 +3,7 @@ use thiserror::Error;
 use crate::token::Type;
 use std::{fmt, fmt::Write};
 
-/// Error that can be generated during the lexing phase of the interpreter.
+/// Error that is generated during the lexing phase of the interpreter.
 #[derive(Error, Debug)]
 pub enum SyntaxError {
     #[error("an unexpected character was found while lexing: {0}")]
@@ -22,22 +22,22 @@ pub enum RuntimeError {
     InvalidTypes(String, Vec<Type>, Vec<(Type, Type)>),
 }
 
-fn display_vec<'a, T>(vec: &Vec<T>) -> String
+fn display_vec<T>(vec: &[T]) -> String
 where
     T: fmt::Debug,
 {
     let mut buffer = String::new();
-    write!(&mut buffer, "{:?}", vec).unwrap();
+    write!(&mut buffer, "{vec:?}").unwrap();
     String::from(&buffer[1..buffer.len() - 1])
 }
 
-fn display_tuple_vec<'a, T>(vec: &Vec<(T, T)>) -> String
+fn display_tuple_vec<T>(vec: &[(T, T)]) -> String
 where
     T: fmt::Debug,
 {
     let mut buffer = format!("{:?}", vec[0]);
-    for tup in 1..vec.len() {
-        buffer.push_str(&format!(" or {:?}", vec[tup]))
+    for tup in vec.iter().skip(1) {
+        buffer.push_str(&format!(" or {tup:?}"));
     }
     buffer
 }

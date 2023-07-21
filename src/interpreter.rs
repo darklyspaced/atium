@@ -12,11 +12,7 @@ pub fn interpret(stmts: Vec<Stmt>) -> Vec<color_eyre::Report> {
             Stmt::Print(expr) => errors.push(print(expr).err()),
         };
     }
-    errors
-        .into_iter()
-        .filter(|opt| opt.is_some())
-        .map(|e| e.unwrap())
-        .collect()
+    errors.into_iter().flatten().collect()
 }
 
 fn expression(expr: Expr) -> Result<Value> {
@@ -72,7 +68,7 @@ fn expression(expr: Expr) -> Result<Value> {
                 },
                 TokenType::Plus => match (&left, &right) {
                     (Value::Integer(a), Value::Integer(b)) => Ok(Value::Integer(a + b)),
-                    (Value::String(a), Value::String(b)) => Ok(Value::String(a.to_owned() + b)),
+                    (Value::String(a), Value::String(b)) => Ok(Value::String(a.clone() + b)),
                     _ => Err(RuntimeError::InvalidTypes(
                         op.lexeme,
                         vec![left.into(), right.into()],

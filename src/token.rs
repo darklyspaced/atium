@@ -21,7 +21,7 @@ pub enum Value {
     Null,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Type {
     String,
     Integer,
@@ -60,15 +60,15 @@ impl Display for Token {
 impl Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::String(a) => write!(f, "{}", a),
-            Self::Integer(a) => write!(f, "{}", a),
-            Self::Boolean(a) => write!(f, "{}", a),
+            Self::String(a) => write!(f, "{a}"),
+            Self::Integer(a) => write!(f, "{a}"),
+            Self::Boolean(a) => write!(f, "{a}"),
             Self::Null => write!(f, "Null"),
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenType {
     // Single-character tokens.
     LeftParen,

@@ -5,6 +5,7 @@ use super::{
 };
 use std::{iter::Peekable, vec::IntoIter};
 
+/// Holds the iterator for the stream that the parser is processing
 pub struct Parser {
     iter: Peekable<IntoIter<Token>>,
 }
@@ -21,10 +22,10 @@ impl Parser {
     /// Discards tokens until the next statement is reached. Invoked when an error is thrown while
     /// parsing. Discarded tokens were part of a statement that caused an error and therefore were
     /// most likely erroneous themselves.
-    fn sync(&mut self, prev: TokenType) -> Option<()> {
+    fn sync(&mut self, prev: &TokenType) -> Option<()> {
         let mut next = self.iter.next()?;
 
-        if prev == TokenType::Semicolon {
+        if prev == &TokenType::Semicolon {
             return Some(());
         }
 
@@ -57,12 +58,20 @@ impl Parser {
                     self.iter.next(); // consume print token
                     let print = Stmt::Print(self.expression()?); // consume argument to print
                     let semi = self.iter.next()?; // expecting semicolon
-                    if semi.token_type != TokenType::Semicolon {
-                        println!(
-                            "{}",
-                            SyntaxError::ExpectedCharacter(next.lexeme.clone(), ';')
-                        );
-                        return None;
+
+                    match semi.token_type {
+                        TokenType::EOF => {
+                            println!(
+                                "{}",
+                                SyntaxError::ExpectedCharacter(String::from("EOF"), ';')
+                            );
+                            return None;
+                        }
+                        TokenType::Semicolon => (),
+                        _ => {
+                            println!("{}", SyntaxError::ExpectedCharacter(semi.lexeme, ';'));
+                            return None;
+                        }
                     }
                     next = self.iter.peek()?.clone();
                     print
@@ -88,16 +97,11 @@ impl Parser {
         let mut left = self.comparison()?;
         let mut next = self.iter.peek()?;
 
-        loop {
-            match next.token_type {
-                TokenType::EqualEqual | TokenType::BangEqual => {
-                    let operator = self.iter.next()?;
-                    let right = self.comparison()?;
-                    left = Expr::Binary(Box::new(left), operator, Box::new(right));
-                    next = self.iter.peek()?;
-                }
-                _ => break,
-            }
+        while let TokenType::EqualEqual | TokenType::BangEqual = next.token_type {
+            let operator = self.iter.next()?;
+            let right = self.comparison()?;
+            left = Expr::Binary(Box::new(left), operator, Box::new(right));
+            next = self.iter.peek()?;
         }
 
         Some(left)
@@ -107,19 +111,15 @@ impl Parser {
         let mut left = self.term()?;
         let mut next = self.iter.peek()?;
 
-        loop {
-            match next.token_type {
-                TokenType::Greater
-                | TokenType::GreaterEqual
-                | TokenType::Less
-                | TokenType::LessEqual => {
-                    let operator = self.iter.next()?;
-                    let right = self.term()?;
-                    left = Expr::Binary(Box::new(left), operator, Box::new(right));
-                    next = self.iter.peek()?;
-                }
-                _ => break,
-            }
+        while let TokenType::Greater
+        | TokenType::GreaterEqual
+        | TokenType::Less
+        | TokenType::LessEqual = next.token_type
+        {
+            let operator = self.iter.next()?;
+            let right = self.term()?;
+            left = Expr::Binary(Box::new(left), operator, Box::new(right));
+            next = self.iter.peek()?;
         }
 
         Some(left)
@@ -129,16 +129,11 @@ impl Parser {
         let mut left = self.factor()?;
         let mut next = self.iter.peek()?;
 
-        loop {
-            match next.token_type {
-                TokenType::Plus | TokenType::Minus => {
-                    let operator = self.iter.next()?;
-                    let right = self.factor()?;
-                    left = Expr::Binary(Box::new(left), operator, Box::new(right));
-                    next = self.iter.peek()?;
-                }
-                _ => break,
-            }
+        while let TokenType::Plus | TokenType::Minus = next.token_type {
+            let operator = self.iter.next()?;
+            let right = self.factor()?;
+            left = Expr::Binary(Box::new(left), operator, Box::new(right));
+            next = self.iter.peek()?;
         }
 
         Some(left)
@@ -150,16 +145,11 @@ impl Parser {
         let mut left = self.unary()?;
         let mut next = self.iter.peek()?;
 
-        loop {
-            match next.token_type {
-                TokenType::Star | TokenType::Slash => {
-                    let operator = self.iter.next()?;
-                    let right = self.unary()?;
-                    left = Expr::Binary(Box::new(left), operator, Box::new(right));
-                    next = self.iter.peek()?;
-                }
-                _ => break,
-            }
+        while let TokenType::Star | TokenType::Slash = next.token_type {
+            let operator = self.iter.next()?;
+            let right = self.unary()?;
+            left = Expr::Binary(Box::new(left), operator, Box::new(right));
+            next = self.iter.peek()?;
         }
 
         Some(left)
@@ -199,15 +189,14 @@ impl Parser {
                 self.iter.next()?; // left paren
                 let expr = self.expression()?;
 
-                if self.iter.peek()?.token_type != TokenType::RightParen {
-                    panic!(
-                        "expected ')' after expression. error occured on line {}",
-                        self.iter.peek()?.line
-                    )
-                }
+                assert!(
+                    !(self.iter.peek()?.token_type != TokenType::RightParen),
+                    "expected ')' after expression. error occured on line {}",
+                    self.iter.peek()?.line
+                );
                 self.iter.next()?; // right paren
 
-                return Some(Expr::Grouping(Box::new(expr)));
+                Some(Expr::Grouping(Box::new(expr)))
             }
             _ => panic!("expected an expression"),
         }

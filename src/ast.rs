@@ -20,16 +20,12 @@ pub enum Expr {
 impl fmt::Display for Expr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Binary(left, op, right) => write!(
-                f,
-                "({} {} {})",
-                (*left).to_string(),
-                op.to_string(),
-                (*right).to_string()
-            ),
-            Self::Unary(op, expr) => write!(f, "({}{})", op.to_string(), ((*expr).to_string())),
-            Self::Literal(lit) => write!(f, "{}", lit.to_string()),
-            Self::Grouping(expr) => write!(f, "([{}])", (*expr).to_string()),
+            Self::Binary(left, op, right) => {
+                write!(f, "({left} {op} {right})")
+            }
+            Self::Unary(op, expr) => write!(f, "({op}{expr})"),
+            Self::Literal(lit) => write!(f, "{lit}"),
+            Self::Grouping(expr) => write!(f, "([{expr}])"),
         }
     }
 }
