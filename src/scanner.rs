@@ -194,6 +194,7 @@ impl<'a> Scanner<'a> {
                 break;
             }
         }
+        dbg!(&self.tokens);
         Ok(())
     }
 }

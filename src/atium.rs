@@ -3,6 +3,7 @@ use color_eyre::{eyre::Context, Result};
 
 use super::interpreter::interpret;
 use super::parser;
+use super::parser::ParseResult;
 use super::scanner::Scanner;
 use std::{
     fs::File,
@@ -18,7 +19,7 @@ pub struct Atium {
 /// Reads source code from file
 ///
 /// # Errors
-/// 1. Errors whne it fails to read the provided file
+/// 1. Errors when it fails to read the provided file
 pub fn run_file(file: &str) -> Result<()> {
     let mut buf = String::default();
     let f_handle = File::open(file).wrap_err(format!("reading \"{file}\""))?;
@@ -38,20 +39,27 @@ pub fn run_repl() -> Result<()> {
     let mut buf = String::new();
     while input.read_line(&mut buf)? != 0 {
         run(buf.clone());
+        buf.clear();
     }
     Ok(())
 }
 
 fn run(src: String) {
+    dbg!("ran");
     let mut scanner = Scanner::new(src);
     if let Err(e) = scanner.scan_tokens() {
         println!("{e}");
     }
-    let mut parser = parser::Parser::new(scanner.tokens.clone());
-    let errs = interpret(parser.parse().unwrap());
-    if !errs.is_empty() {
-        for err in errs {
-            println!("{err}");
+
+    let mut parser = parser::Parser::new(scanner.tokens);
+    match parser.parse() {
+        ParseResult::Success(stmts) => {
+            interpret(stmts);
         }
-    }
+        ParseResult::Failure(errs) => {
+            for err in errs {
+                println!("{err}");
+            }
+        }
+    };
 }
