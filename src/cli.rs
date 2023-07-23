@@ -12,7 +12,7 @@ use std::{
 
 #[derive(Parser)]
 #[command(author, version, about)]
-pub struct Atium {
+pub struct Cli {
     pub script: Option<String>,
 }
 
@@ -45,7 +45,6 @@ pub fn run_repl() -> Result<()> {
 }
 
 fn run(src: String) {
-    dbg!("ran");
     let mut scanner = Scanner::new(src);
     if let Err(e) = scanner.scan_tokens() {
         println!("{e}");
@@ -54,7 +53,9 @@ fn run(src: String) {
     let mut parser = parser::Parser::new(scanner.tokens);
     match parser.parse() {
         ParseResult::Success(stmts) => {
-            interpret(stmts);
+            for err in interpret(stmts) {
+                println!("{err}");
+            }
         }
         ParseResult::Failure(errs) => {
             for err in errs {

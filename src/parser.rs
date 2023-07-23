@@ -5,30 +5,11 @@ use super::{
     error::SyntaxError,
     token::{Token, TokenType},
 };
-use std::{iter::Peekable, marker::PhantomData, result, vec::IntoIter};
-
-/// A wrapper trait over an iterator that allows the careless advancement of an iterator.
-///
-/// Implementing this trait on a struct guarantees that for the duration of the implementation, the
-/// iterator will always return [`Some`] If a [`None`] variant is found, then an [`unreachable`]
-/// panic is invoked as [`None`] should not have been returned.
-pub trait Impetuous {
-    type Item;
-    fn advance(&mut self) -> Self::Item;
-    fn peer(&mut self) -> &Self::Item;
-}
-
-/// Indicates that [`Impetuous`] is implemented
-pub struct Safe;
-/// Indicates that [`Impetuous`] is not implemented
-pub struct Unsafe;
+use std::{iter::Peekable, result, vec::IntoIter};
 
 /// Machinery that allows the parser to convert the tokens into an AST
-pub struct Parser<State = Safe> {
+pub struct Parser {
     iter: Peekable<IntoIter<Token>>,
-    /// In the unsafe state, there is a possibility of `iter` returning a [`None`]. When it is
-    /// safe, this is impossible; [`Impetuous`] is implemented
-    state: PhantomData<State>,
 }
 
 /// An enum that tells the interpreter whether parsing failed or succeded.
@@ -40,46 +21,42 @@ pub enum ParseResult {
     Failure(Vec<color_eyre::Report>),
 }
 
-impl Impetuous for Parser<Safe> {
-    type Item = Token;
-    fn advance(&mut self) -> Self::Item {
-        self.iter.next().map_or_else(
-            || unreachable!("syntax errors were failed to be caught; reached EOF while parsing"),
-            |item| item,
-        )
-    }
-
-    fn peer(&mut self) -> &Self::Item {
-        self.iter.peek().map_or_else(
-            || unreachable!("syntax errors were failed to be caught; reached EOF while parsing"),
-            |item| item,
-        )
-    }
-}
-
 impl Parser {
     pub fn new(tokens: Vec<Token>) -> Self {
         Self {
             iter: tokens.into_iter().peekable(),
-            state: PhantomData::default(),
         }
+    }
+
+    /// Advance the iterator, erroring if EOF occurs early -- while an expression was expected
+    fn advance(&mut self) -> Result<Token> {
+        self.iter
+            .next()
+            .ok_or_else(|| SyntaxError::NoExpression.into())
+    }
+
+    /// Peek the iterator, erroring if EOF occurs early -- while an expression was expected
+    fn peer(&mut self) -> Result<&Token> {
+        self.iter
+            .peek()
+            .ok_or_else(|| SyntaxError::NoExpression.into())
     }
 }
 
-impl Parser<Safe> {
+impl Parser {
     /// Prevents error cascading (one error causing a bunch of other ones later in the program)
     ///
     /// Discards tokens until the next statement is reached. Invoked when an error is thrown while
     /// parsing. Discarded tokens were part of a statement that caused an error and therefore were
     /// most likely erroneous themselves.
     fn sync(&mut self, prev: &TokenType) -> Option<()> {
-        let mut next = self.iter.next()?;
+        self.iter.next()?;
 
         if prev == &TokenType::Semicolon {
             return Some(());
         }
 
-        while next.token_type != TokenType::EOF {
+        for next in self.iter.by_ref() {
             match next.token_type {
                 TokenType::Class
                 | TokenType::Fun
@@ -91,7 +68,7 @@ impl Parser<Safe> {
                 | TokenType::Return => {
                     return Some(());
                 }
-                _ => next = self.iter.next()?,
+                _ => (),
             }
         }
         Some(())
@@ -107,42 +84,24 @@ impl Parser<Safe> {
     /// This function should never panic as None should never be returned from the iterator.
     pub fn parse(&mut self) -> ParseResult {
         let mut statements: Vec<Result<Stmt>> = vec![];
-        let mut next = self.peer();
 
-        loop {
-            match next.token_type {
-                TokenType::Print => {
-                    self.iter.next(); // consume print token
-                    let print = match self.expression() {
-                        Ok(arg) => Ok(Stmt::Print(arg)),
-                        Err(err) => Err(err),
+        while let Some(peek_next) = self.iter.peek() {
+            if peek_next.token_type == TokenType::Print {
+                self.iter.next(); // consume print token
+                let print = self.expression().map(Stmt::Print);
+                let Some(semi) = self.iter.next() else {
+                        statements.push(Err(SyntaxError::ExpectedCharacter(String::from("EOF"), ';').into()));
+                        break;
                     };
-                    let semi = self.advance();
 
-                    match semi.token_type {
-                        TokenType::EOF => {
-                            statements.push(Err(SyntaxError::ExpectedCharacter(
-                                String::from("EOF"),
-                                ';',
-                            )
-                            .into()));
-                            break;
-                        }
-                        TokenType::Semicolon => (),
-                        _ => {
-                            statements
-                                .push(Err(SyntaxError::ExpectedCharacter(semi.lexeme, ';').into()));
-                        }
-                    }
-                    next = self.peer();
-                    statements.push(print);
+                if !matches!(semi.token_type, TokenType::Semicolon) {
+                    statements.push(Err(SyntaxError::ExpectedCharacter(semi.lexeme, ';').into()));
                 }
-                TokenType::EOF => break,
-                _ => {
-                    let expression = self.expression().map(Stmt::Expr);
-                    statements.push(expression);
-                    next = self.peer();
-                }
+
+                statements.push(print);
+            } else {
+                let expression = self.expression().map(Stmt::Expr);
+                statements.push(expression);
             }
         }
 
@@ -164,13 +123,13 @@ impl Parser<Safe> {
 
     fn equality(&mut self) -> Result<Expr> {
         let mut left = self.comparison()?;
-        let mut next = self.peer();
+        let mut next = self.peer()?;
 
         while let TokenType::EqualEqual | TokenType::BangEqual = next.token_type {
-            let operator = self.advance();
+            let operator = self.advance()?;
             let right = self.comparison()?;
             left = Expr::Binary(Box::new(left), operator, Box::new(right));
-            next = self.peer();
+            next = self.peer()?;
         }
 
         Ok(left)
@@ -180,17 +139,17 @@ impl Parser<Safe> {
     /// literals
     fn comparison(&mut self) -> Result<Expr> {
         let mut left = self.term()?;
-        let mut next = self.peer();
+        let mut next = self.peer()?;
 
         while let TokenType::Greater
         | TokenType::GreaterEqual
         | TokenType::Less
         | TokenType::LessEqual = next.token_type
         {
-            let operator = self.advance();
+            let operator = self.advance()?;
             let right = self.term()?;
             left = Expr::Binary(Box::new(left), operator, Box::new(right));
-            next = self.peer();
+            next = self.peer()?;
         }
 
         Ok(left)
@@ -215,7 +174,7 @@ impl Parser<Safe> {
     /// divisions
     fn factor(&mut self) -> Result<Expr> {
         let mut left = self.unary()?;
-        let mut next = self.iter.peek().unwrap();
+        let mut next = self.peer()?;
 
         while let TokenType::Star | TokenType::Slash = next.token_type {
             let operator = self.iter.next().unwrap();
@@ -230,11 +189,11 @@ impl Parser<Safe> {
 
     /// Resolves into an [`Expr::Unary`] that represents a literal with an operator applied to it
     fn unary(&mut self) -> Result<Expr> {
-        let next = self.peer();
+        let next = self.peer()?;
 
         match next.token_type {
             TokenType::Bang | TokenType::Minus => {
-                let next = self.advance();
+                let next = self.advance()?;
 
                 Ok(Expr::Unary(next, Box::new(self.unary()?)))
             }
@@ -247,7 +206,7 @@ impl Parser<Safe> {
 
     /// Resolves into a [`Expr::Literal`] that represents, you guessed it, a literal.
     fn primary(&mut self) -> Result<Expr> {
-        let next = self.peer();
+        let next = self.peer()?;
 
         match next.token_type {
             TokenType::False
@@ -255,21 +214,21 @@ impl Parser<Safe> {
             | TokenType::Nil
             | TokenType::Str
             | TokenType::Number => {
-                let next = self.advance();
+                let next = self.advance()?;
                 Ok(Expr::Literal(next))
             }
             TokenType::LeftParen => {
-                self.advance(); // left paren
+                self.advance()?; // left paren
                 let expr = self.expression()?;
 
-                let next = self.advance();
+                let next = self.advance()?;
                 if TokenType::RightParen == next.token_type {
                     return Ok(Expr::Grouping(Box::new(expr)));
                 }
 
                 Err(SyntaxError::ExpectedCharacter(next.lexeme, ')').into())
             }
-            _ => Err(SyntaxError::NoExpression(next.clone().lexeme).into()),
+            _ => Err(SyntaxError::NoExpression.into()),
         }
     }
 }

@@ -1,7 +1,10 @@
 use thiserror::Error;
 
 use crate::token::Type;
-use std::{fmt, fmt::Write};
+use std::{
+    fmt,
+    fmt::{Debug, Display, Write},
+};
 
 /// Error that is generated during the lexing phase of the interpreter.
 #[derive(Error, Debug)]
@@ -10,18 +13,18 @@ pub enum SyntaxError {
     UnexpectedCharacter(char),
     #[error("expected: '{1}' | found: '{0}'")]
     ExpectedCharacter(String, char),
-    #[error("expected an expression | found: '{0}'")]
-    NoExpression(String),
+    #[error("expected an expression, or a statement. idfk, you figure it out")]
+    NoExpression,
 }
 /// Error that is generated during interpretation.
 #[derive(Error, Debug)]
-pub enum RuntimeError {
+pub enum RuntimeError<D: Display + Debug> {
     #[error("an invalid operator was used. found: {0} | expected: {}", display_vec(.1))]
-    InvalidOperator(String, Vec<char>),
+    InvalidOperator(String, Vec<D>),
     #[error("an invalid type was found: {0} | expected: {}", display_vec(.1))]
     InvalidType(Type, Vec<Type>),
     #[error("cannot apply '{0}' to values ({}) | expected: {}", display_vec(.1), display_tuple_vec(.2))]
-    InvalidTypes(String, Vec<Type>, Vec<(Type, Type)>),
+    InvalidTypes(D, Vec<Type>, Vec<(Type, Type)>),
 }
 
 fn display_vec<T: fmt::Debug>(vec: &[T]) -> String {

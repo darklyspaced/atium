@@ -4,6 +4,23 @@ use super::token::{TokenType, Type, Value};
 
 use color_eyre::Result;
 
+/// Macro that checks that the arguments to an operator are correct
+///
+/// `$op_token`: the [`Token`] of the operator
+/// `$prov_value`: the [`Value`] that the operation is being performed on
+/// `$valid_type`: the list of valid [`Value`] that the operation _could_ be performed on
+macro_rules! type_check {
+    ($op_token:expr, $prov_value:expr, $($valid_op:path),+; $($valid_value:path),+; $($valid_type:expr),+; $($op:tt),+) => {{
+        match $op_token.token_type {
+            $($valid_op => match $prov_value {
+                $valid_value(a) => Ok($valid_value(a)),
+                _ => Err(RuntimeError::InvalidType::<Type>($prov_value.into(), vec![$valid_type]).into())
+            }),+
+            _ => Err(RuntimeError::InvalidOperator($op_token.lexeme, vec![stringify!($($op),+)]).into()),
+        }
+    }};
+}
+
 pub fn interpret(stmts: Vec<Stmt>) -> Vec<color_eyre::Report> {
     let mut errors = Vec::new();
     for stmt in stmts {
@@ -16,23 +33,20 @@ pub fn interpret(stmts: Vec<Stmt>) -> Vec<color_eyre::Report> {
 }
 
 fn expression(expr: Expr) -> Result<Value> {
+    dbg!(&expr);
     match expr {
         Expr::Literal(lit) => Ok(lit.literal.unwrap()),
         Expr::Grouping(expr) => expression(*expr),
         Expr::Unary(op, expr) => {
             let expr = expression(*expr)?;
 
-            match op.token_type {
-                TokenType::Minus => match expr {
-                    Value::Integer(a) => Ok(Value::Integer(-a)),
-                    _ => Err(RuntimeError::InvalidType(expr.into(), vec![Type::Integer]).into()),
-                },
-                TokenType::Bang => match expr {
-                    Value::Boolean(a) => Ok(Value::Boolean(!a)),
-                    _ => Err(RuntimeError::InvalidType(expr.into(), vec![Type::Boolean]).into()),
-                },
-                _ => Err(RuntimeError::InvalidOperator(op.lexeme, vec!['-', '!']).into()),
-            }
+            type_check!(
+               op, expr,
+               TokenType::Minus, TokenType::Bang;
+               Value::Integer, Value::Boolean;
+               Type::Integer, Type::Boolean;
+               -, !
+            )
         }
         Expr::Binary(left, op, right) => {
             let left = expression(*left)?;

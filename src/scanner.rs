@@ -106,17 +106,24 @@ impl<'a> Scanner<'a> {
                     '/' => {
                         if source.peek().unwrap() == &'/' {
                             source.next();
-                            let token_type = loop {
+
+                            loop {
                                 match source.next() {
-                                    Some('\n') => break None,
-                                    None => break Some(EOF),
+                                    Some('\n') | None => break,
                                     _ => (),
-                                };
-                            };
-                            if let Some(tt) = token_type {
-                                add_tok(tt, String::new(), None);
-                                // EOF has no lexeme
+                                }
                             }
+                            // let token_type = loop {
+                            //     match source.next() {
+                            //         Some('\n') => break None,
+                            //         None => break Some(EOF),
+                            //         _ => (),
+                            //     };
+                            // };
+                            // if let Some(tt) = token_type {
+                            //     add_tok(tt, String::new(), None);
+                            //     // EOF has no lexeme
+                            // }
                             self.line += 1; // if its a comment then scanner consumes the \n
                         } else {
                             add_tok(Slash, chr.to_string(), None);
@@ -145,12 +152,14 @@ impl<'a> Scanner<'a> {
                                 Some(char) if char.is_ascii_digit() || char.eq(&'.') => {
                                     num.push(source.next().unwrap());
                                 }
-                                Some(_) => break,
-                                None => add_tok(EOF, String::new(), None),
+                                _ => break,
                             }
                         }
                         let lit = num.into_iter().collect::<String>();
-                        let int_lit = lit.clone().parse::<f64>().unwrap();
+                        let int_lit = lit
+                            .clone()
+                            .parse::<f64>()
+                            .expect("invalidy parsed a number literal");
 
                         add_tok(Number, lit, Some(Value::Integer(int_lit)));
                     }
@@ -165,8 +174,7 @@ impl<'a> Scanner<'a> {
                                 Some(char) if char.is_alphanumeric() || char.eq(&'_') => {
                                     ident.push(source.next().unwrap());
                                 }
-                                Some(_) => break,
-                                None => add_tok(EOF, String::new(), None),
+                                _ => break,
                             }
                         }
                         let ident = ident.into_iter().collect::<String>();
@@ -189,8 +197,6 @@ impl<'a> Scanner<'a> {
                     _ => return Err(SyntaxError::UnexpectedCharacter(chr).into()),
                 };
             } else {
-                self.tokens
-                    .push(Token::new(EOF, String::new(), None, self.line));
                 break;
             }
         }
