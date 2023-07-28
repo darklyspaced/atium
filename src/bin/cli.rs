@@ -1,4 +1,4 @@
-use atium::atium::{run_file, run_repl, Cli};
+use atium::cli::{run_file, run_repl, Cli};
 use clap::Parser;
 use color_eyre::Result;
 

@@ -2,7 +2,7 @@ use super::ast::{Expr, Stmt};
 use super::error::RuntimeError;
 use super::token::{TokenType, Type, Value};
 
-use color_eyre::Result;
+use color_eyre::{Report, Result};
 
 /// Macro that checks that the arguments to an operator are correct
 ///
@@ -21,19 +21,28 @@ macro_rules! type_check {
     }};
 }
 
-pub fn interpret(stmts: Vec<Stmt>) -> Vec<color_eyre::Report> {
-    let mut errors = Vec::new();
-    for stmt in stmts {
-        match stmt {
-            Stmt::Expr(expr) => errors.push(expression(expr).err()),
-            Stmt::Print(expr) => errors.push(print(expr).err()),
-        };
+pub(super) struct Interpreter {
+    stmts: Vec<Stmt>,
+}
+
+impl Interpreter {
+    pub fn new(stmts: Vec<Stmt>) -> Self {
+        Self { stmts }
     }
-    errors.into_iter().flatten().collect()
+
+    pub fn interpret(self) -> Result<(), Vec<Report>> {
+        let mut errors = Vec::new();
+        for stmt in self.stmts {
+            match stmt {
+                Stmt::Expr(expr) => errors.push(expression(expr).err()),
+                Stmt::Print(expr) => errors.push(print(expr).err()),
+            };
+        }
+        Err(errors.into_iter().flatten().collect())
+    }
 }
 
 fn expression(expr: Expr) -> Result<Value> {
-    dbg!(&expr);
     match expr {
         Expr::Literal(lit) => Ok(lit.literal.unwrap()),
         Expr::Grouping(expr) => expression(*expr),
@@ -82,7 +91,7 @@ fn expression(expr: Expr) -> Result<Value> {
                 },
                 TokenType::Plus => match (&left, &right) {
                     (Value::Integer(a), Value::Integer(b)) => Ok(Value::Integer(a + b)),
-                    (Value::String(a), Value::String(b)) => Ok(Value::String(a.clone() + b)),
+                    (Value::String(a), Value::String(b)) => Ok(Value::String(format!("{a}{b}"))),
                     _ => Err(RuntimeError::InvalidTypes(
                         op.lexeme,
                         vec![left.into(), right.into()],

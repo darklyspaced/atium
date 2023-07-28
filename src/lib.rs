@@ -7,12 +7,17 @@
     clippy::must_use_candidate,
     clippy::enum_glob_use,
     clippy::missing_panics_doc,
-    clippy::too_many_lines
+    clippy::too_many_lines,
+    clippy::missing_errors_doc
 )]
+#![feature(type_changing_struct_update)] // allows spread syntax even when generic type paramaters
+                                         // in structs have differing resolved values. see:
+                                         // `transform`
 pub mod ast;
 pub mod atium;
+pub mod cli;
 pub mod error;
 pub mod interpreter;
+pub mod lexer;
 pub mod parser;
-pub mod scanner;
 pub mod token;

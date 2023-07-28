@@ -1,15 +1,16 @@
 use clap::Parser;
-use color_eyre::{eyre::Context, Result};
+use color_eyre::{eyre::Context, Report, Result};
 
-use super::interpreter::interpret;
-use super::parser;
-use super::parser::ParseResult;
-use super::scanner::Scanner;
+use crate::atium::Atium;
 use std::{
     fs::File,
     io::{stdin, BufRead, BufReader, Read},
 };
 
+/// The outward facing CLI for client that reports errors, handles input and more
+///
+/// This CLI passes all input to [`Atium`] which handles the internal logic and in turn gets errors
+/// from it and pretty prints them out.
 #[derive(Parser)]
 #[command(author, version, about)]
 pub struct Cli {
@@ -26,8 +27,17 @@ pub fn run_file(file: &str) -> Result<()> {
     let mut f_handle = BufReader::new(f_handle);
     f_handle.read_to_string(&mut buf)?;
 
-    run(buf);
+    if let Err(errs) = run(&buf) {
+        report(&errs);
+    }
     Ok(())
+}
+
+fn report(errors: &[Report]) {
+    // TODO: buffer the error output
+    for err in errors {
+        println!("{err}");
+    }
 }
 
 /// Reads source code line by line, as user enters it
@@ -38,29 +48,16 @@ pub fn run_repl() -> Result<()> {
     let mut input = stdin().lock();
     let mut buf = String::new();
     while input.read_line(&mut buf)? != 0 {
-        run(buf.clone());
+        if let Err(errs) = run(&buf) {
+            report(&errs);
+        }
         buf.clear();
     }
     Ok(())
 }
 
-fn run(src: String) {
-    let mut scanner = Scanner::new(src);
-    if let Err(e) = scanner.scan_tokens() {
-        println!("{e}");
-    }
-
-    let mut parser = parser::Parser::new(scanner.tokens);
-    match parser.parse() {
-        ParseResult::Success(stmts) => {
-            for err in interpret(stmts) {
-                println!("{err}");
-            }
-        }
-        ParseResult::Failure(errs) => {
-            for err in errs {
-                println!("{err}");
-            }
-        }
-    };
+fn run(src: &str) -> Result<(), Vec<Report>> {
+    let atium = Atium::new(src);
+    atium.lex()?.parse()?.interpret()?;
+    Ok(())
 }

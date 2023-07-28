@@ -1,7 +1,7 @@
 use std::{fmt, fmt::Display};
-#[derive(Clone, Debug, PartialEq)]
 
 /// A token
+#[derive(Clone, Debug, PartialEq)]
 pub struct Token {
     /// The type of token represented by the struct whether that be a STRING or a CLASS
     pub token_type: TokenType,
@@ -16,15 +16,25 @@ pub struct Token {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value {
     String(String),
-    Integer(f64),
+    Integer(i64),
+    Float(f64),
     Boolean(bool),
     Null,
+}
+
+// TODO: make a macro that does all the generation so that you don't have the wrap the values
+// anymore
+impl From<u16> for Value {
+    fn from(value: u16) -> Self {
+        Self::Integer(i64::from(value))
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Type {
     String,
     Integer,
+    Float,
     Boolean,
     Null,
 }
@@ -34,6 +44,7 @@ impl From<Value> for Type {
         match value {
             Value::String(_) => Self::String,
             Value::Integer(_) => Self::Integer,
+            Value::Float(_) => Self::Float,
             Value::Boolean(_) => Self::Boolean,
             Value::Null => Self::Null,
         }
@@ -62,6 +73,7 @@ impl Display for Value {
         match self {
             Self::String(a) => write!(f, "{a}"),
             Self::Integer(a) => write!(f, "{a}"),
+            Self::Float(a) => write!(f, "{a}"),
             Self::Boolean(a) => write!(f, "{a}"),
             Self::Null => write!(f, "Null"),
         }
