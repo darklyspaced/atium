@@ -63,7 +63,7 @@ fn expression(expr: Expr) -> Result<Value> {
 
             match op.token_type {
                 TokenType::Slash => match (&left, &right) {
-                    (Value::Integer(a), Value::Integer(b)) => Ok(Value::Integer(a / b)),
+                    (Value::Integer(a), Value::Integer(b)) => Ok((a / b).into()),
                     _ => Err(RuntimeError::InvalidTypes(
                         op.lexeme,
                         vec![left.into(), right.into()],
@@ -72,7 +72,7 @@ fn expression(expr: Expr) -> Result<Value> {
                     .into()),
                 },
                 TokenType::Minus => match (&left, &right) {
-                    (Value::Integer(a), Value::Integer(b)) => Ok(Value::Integer(a - b)),
+                    (Value::Integer(a), Value::Integer(b)) => Ok((a - b).into()),
                     _ => Err(RuntimeError::InvalidTypes(
                         op.lexeme,
                         vec![left.into(), right.into()],
@@ -81,7 +81,7 @@ fn expression(expr: Expr) -> Result<Value> {
                     .into()),
                 },
                 TokenType::Star => match (&left, &right) {
-                    (Value::Integer(a), Value::Integer(b)) => Ok(Value::Integer(a * b)),
+                    (Value::Integer(a), Value::Integer(b)) => Ok((a * b).into()),
                     _ => Err(RuntimeError::InvalidTypes(
                         op.lexeme,
                         vec![left.into(), right.into()],
@@ -90,8 +90,8 @@ fn expression(expr: Expr) -> Result<Value> {
                     .into()),
                 },
                 TokenType::Plus => match (&left, &right) {
-                    (Value::Integer(a), Value::Integer(b)) => Ok(Value::Integer(a + b)),
-                    (Value::String(a), Value::String(b)) => Ok(Value::String(format!("{a}{b}"))),
+                    (Value::Integer(a), Value::Integer(b)) => Ok((a + b).into()),
+                    (Value::String(a), Value::String(b)) => Ok(format!("{a}{b}").into()),
                     _ => Err(RuntimeError::InvalidTypes(
                         op.lexeme,
                         vec![left.into(), right.into()],

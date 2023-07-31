@@ -53,6 +53,7 @@ impl<'a> Cursor<'a> {
 
     pub fn scan_tokens(mut self) -> Result<Vec<Token>, Vec<Report>> {
         let mut errors: Vec<Report> = vec![];
+
         loop {
             let next = self.iter.next();
             if let Some(chr) = next {
@@ -74,7 +75,12 @@ impl<'a> Cursor<'a> {
                     '/' => {
                         dbg!(&self.iter.peek());
                         if self.iter.peek().unwrap() == &'/' {
-                            while self.iter.next() != Some('\n') {}
+                            loop {
+                                match self.iter.next() {
+                                    Some('\n') | None => break,
+                                    Some(_) => (),
+                                }
+                            }
                             self.line += 1;
                         } else {
                             self.add_token(Slash, chr.to_string(), None);
@@ -127,24 +133,23 @@ impl<'a> Cursor<'a> {
                             self.add_token(
                                 Number,
                                 lexeme,
-                                Some(Value::Integer(pre_literal.parse::<i64>().unwrap())),
+                                Some(Value::Integer(pre_literal.parse::<i128>().unwrap())),
                             );
                         }
                     }
-                    '\r' | '\t' => (),
-                    '\n' => {
-                        self.line += 1;
-                    }
-                    _ if chr.is_alphabetic() => {
+                    'a'..='z' | 'A'..='Z' => {
                         let mut ident = vec![chr];
-                        loop {
-                            match self.iter.peek() {
-                                Some(char) if char.is_alphanumeric() || char.eq(&'_') => {
-                                    ident.push(self.iter.next().unwrap());
-                                }
-                                _ => break,
-                            }
+                        while let Some('a'..='z' | 'A'..='Z' | '1'..='9') = self.iter.peek() {
+                            ident.push(self.iter.next().unwrap());
                         }
+                        // loop {
+                        //     match self.iter.peek() {
+                        //         Some(char) if char.is_alphanumeric() || char.eq(&'_') => {
+                        //             ident.push(self.iter.next().unwrap());
+                        //         }
+                        //         _ => break,
+                        //     }
+                        // }
                         let ident = ident.into_iter().collect::<String>();
                         if self.reserved.contains_key(&ident) {
                             let tt = self.reserved.get(&ident).unwrap().clone();
@@ -161,7 +166,8 @@ impl<'a> Cursor<'a> {
                             self.add_token(Identifier, ident, None);
                         }
                     }
-                    ' ' => (),
+                    '\n' => self.line += 1,
+                    '\r' | '\t' | ' ' => (),
                     _ => errors.push(SyntaxError::UnexpectedCharacter(chr).into()),
                 };
             } else {
@@ -192,5 +198,170 @@ impl<'a> Cursor<'a> {
             Some(_) => self.add_token(failure, predicate.to_string(), None),
             None => (), // NOTE: we now can add smthing to None case in the future
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        lexer::Cursor,
+        token::{Token, TokenType, Value},
+    };
+
+    #[test]
+    fn print_stmt() {
+        let input = "print 10;";
+        let cursor = Cursor::new(input);
+
+        let tokens = cursor.scan_tokens().unwrap();
+        assert_eq!(
+            tokens,
+            vec![
+                Token {
+                    token_type: TokenType::Print,
+                    lexeme: String::from("print"),
+                    literal: None,
+                    line: 0,
+                },
+                Token {
+                    token_type: TokenType::Number,
+                    lexeme: String::from("10"),
+                    literal: Some(Value::Integer(10)),
+                    line: 0,
+                },
+                Token {
+                    token_type: TokenType::Semicolon,
+                    lexeme: String::from(";"),
+                    literal: None,
+                    line: 0,
+                }
+            ]
+        );
+    }
+
+    #[test]
+    fn successive_print_stmts() {
+        let input = r#"print 10; print "string";"#;
+        let cursor = Cursor::new(input);
+
+        let tokens = cursor.scan_tokens().unwrap();
+        assert_eq!(
+            tokens,
+            vec![
+                Token {
+                    token_type: TokenType::Print,
+                    lexeme: String::from("print"),
+                    literal: None,
+                    line: 0,
+                },
+                Token {
+                    token_type: TokenType::Number,
+                    lexeme: String::from("10"),
+                    literal: Some(Value::Integer(10)),
+                    line: 0,
+                },
+                Token {
+                    token_type: TokenType::Semicolon,
+                    lexeme: String::from(";"),
+                    literal: None,
+                    line: 0,
+                },
+                Token {
+                    token_type: TokenType::Print,
+                    lexeme: String::from("print"),
+                    literal: None,
+                    line: 0,
+                },
+                Token {
+                    token_type: TokenType::Str,
+                    lexeme: String::from("\"string\""),
+                    literal: Some(Value::String(String::from("string"))),
+                    line: 0,
+                },
+                Token {
+                    token_type: TokenType::Semicolon,
+                    lexeme: String::from(";"),
+                    literal: None,
+                    line: 0,
+                }
+            ]
+        );
+    }
+
+    #[test]
+    fn comment() {
+        let input = "// there should be no tokens!";
+        let cursor = Cursor::new(input);
+
+        let tokens = cursor.scan_tokens().unwrap();
+        assert_eq!(tokens, vec![]);
+    }
+
+    #[test]
+    fn keyword_ident() {
+        let input = "var stormlight";
+        let cursor = Cursor::new(input);
+
+        let tokens = cursor.scan_tokens().unwrap();
+        assert_eq!(
+            tokens,
+            vec![
+                Token {
+                    token_type: TokenType::Var,
+                    lexeme: String::from("var"),
+                    literal: None,
+                    line: 0,
+                },
+                Token {
+                    token_type: TokenType::Identifier,
+                    lexeme: String::from("stormlight"),
+                    literal: None,
+                    line: 0,
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn types() {
+        let input = r#"true 1 "foo" false 69.420"#;
+        let cursor = Cursor::new(input);
+
+        let tokens = cursor.scan_tokens().unwrap();
+        assert_eq!(
+            tokens,
+            vec![
+                Token {
+                    token_type: TokenType::True,
+                    lexeme: String::from("true"),
+                    literal: Some(Value::Boolean(true,),),
+                    line: 0,
+                },
+                Token {
+                    token_type: TokenType::Number,
+                    lexeme: String::from("1"),
+                    literal: Some(Value::Integer(1,),),
+                    line: 0,
+                },
+                Token {
+                    token_type: TokenType::Str,
+                    lexeme: String::from("\"foo\""),
+                    literal: Some(Value::String(String::from("foo"),),),
+                    line: 0,
+                },
+                Token {
+                    token_type: TokenType::False,
+                    lexeme: String::from("false"),
+                    literal: Some(Value::Boolean(false,),),
+                    line: 0,
+                },
+                Token {
+                    token_type: TokenType::Number,
+                    lexeme: String::from("69.420"),
+                    literal: Some(Value::Float(69.420),),
+                    line: 0,
+                }
+            ]
+        );
     }
 }

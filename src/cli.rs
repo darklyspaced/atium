@@ -36,7 +36,7 @@ pub fn run_file(file: &str) -> Result<()> {
 fn report(errors: &[Report]) {
     // TODO: buffer the error output
     for err in errors {
-        println!("{err}");
+        eprintln!("{err}");
     }
 }
 
