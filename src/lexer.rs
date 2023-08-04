@@ -216,29 +216,28 @@ mod tests {
         let cursor = Cursor::new(input);
 
         let tokens = cursor.scan_tokens().unwrap();
-        assert_eq!(
-            tokens,
-            vec![
-                Token {
-                    token_type: TokenType::Print,
-                    lexeme: String::from("print"),
-                    literal: None,
-                    line: 0,
-                },
-                Token {
-                    token_type: TokenType::Number,
-                    lexeme: String::from("10"),
-                    literal: Some(Value::Integer(10)),
-                    line: 0,
-                },
-                Token {
-                    token_type: TokenType::Semicolon,
-                    lexeme: String::from(";"),
-                    literal: None,
-                    line: 0,
-                }
-            ]
-        );
+        let expected = vec![
+            Token {
+                token_type: TokenType::Print,
+                lexeme: String::from("print"),
+                literal: None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Number,
+                lexeme: String::from("10"),
+                literal: Some(Value::Integer(10)),
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Semicolon,
+                lexeme: String::from(";"),
+                literal: None,
+                line: 0,
+            },
+        ];
+
+        assert_eq!(tokens, expected);
     }
 
     #[test]
@@ -247,47 +246,46 @@ mod tests {
         let cursor = Cursor::new(input);
 
         let tokens = cursor.scan_tokens().unwrap();
-        assert_eq!(
-            tokens,
-            vec![
-                Token {
-                    token_type: TokenType::Print,
-                    lexeme: String::from("print"),
-                    literal: None,
-                    line: 0,
-                },
-                Token {
-                    token_type: TokenType::Number,
-                    lexeme: String::from("10"),
-                    literal: Some(Value::Integer(10)),
-                    line: 0,
-                },
-                Token {
-                    token_type: TokenType::Semicolon,
-                    lexeme: String::from(";"),
-                    literal: None,
-                    line: 0,
-                },
-                Token {
-                    token_type: TokenType::Print,
-                    lexeme: String::from("print"),
-                    literal: None,
-                    line: 0,
-                },
-                Token {
-                    token_type: TokenType::Str,
-                    lexeme: String::from("\"string\""),
-                    literal: Some(Value::String(String::from("string"))),
-                    line: 0,
-                },
-                Token {
-                    token_type: TokenType::Semicolon,
-                    lexeme: String::from(";"),
-                    literal: None,
-                    line: 0,
-                }
-            ]
-        );
+        let expected = vec![
+            Token {
+                token_type: TokenType::Print,
+                lexeme: String::from("print"),
+                literal: None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Number,
+                lexeme: String::from("10"),
+                literal: Some(Value::Integer(10)),
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Semicolon,
+                lexeme: String::from(";"),
+                literal: None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Print,
+                lexeme: String::from("print"),
+                literal: None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Str,
+                lexeme: String::from("\"string\""),
+                literal: Some(Value::String(String::from("string"))),
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Semicolon,
+                lexeme: String::from(";"),
+                literal: None,
+                line: 0,
+            },
+        ];
+
+        assert_eq!(tokens, expected);
     }
 
     #[test]
@@ -296,6 +294,7 @@ mod tests {
         let cursor = Cursor::new(input);
 
         let tokens = cursor.scan_tokens().unwrap();
+
         assert_eq!(tokens, vec![]);
     }
 
@@ -305,23 +304,21 @@ mod tests {
         let cursor = Cursor::new(input);
 
         let tokens = cursor.scan_tokens().unwrap();
-        assert_eq!(
-            tokens,
-            vec![
-                Token {
-                    token_type: TokenType::Var,
-                    lexeme: String::from("var"),
-                    literal: None,
-                    line: 0,
-                },
-                Token {
-                    token_type: TokenType::Identifier,
-                    lexeme: String::from("stormlight"),
-                    literal: None,
-                    line: 0,
-                },
-            ]
-        );
+        let expected = vec![
+            Token {
+                token_type: TokenType::Var,
+                lexeme: String::from("var"),
+                literal: None,
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Identifier,
+                lexeme: String::from("stormlight"),
+                literal: None,
+                line: 0,
+            },
+        ];
+        assert_eq!(tokens, expected);
     }
 
     #[test]
@@ -330,40 +327,39 @@ mod tests {
         let cursor = Cursor::new(input);
 
         let tokens = cursor.scan_tokens().unwrap();
-        assert_eq!(
-            tokens,
-            vec![
-                Token {
-                    token_type: TokenType::True,
-                    lexeme: String::from("true"),
-                    literal: Some(true.into(),),
-                    line: 0,
-                },
-                Token {
-                    token_type: TokenType::Number,
-                    lexeme: String::from("1"),
-                    literal: Some(1.into(),),
-                    line: 0,
-                },
-                Token {
-                    token_type: TokenType::Str,
-                    lexeme: String::from("\"foo\""),
-                    literal: Some(String::from("foo").into()),
-                    line: 0,
-                },
-                Token {
-                    token_type: TokenType::False,
-                    lexeme: String::from("false"),
-                    literal: Some(false.into(),),
-                    line: 0,
-                },
-                Token {
-                    token_type: TokenType::Number,
-                    lexeme: String::from("69.420"),
-                    literal: Some(69.420.into(),),
-                    line: 0,
-                }
-            ]
-        );
+        let expected = vec![
+            Token {
+                token_type: TokenType::True,
+                lexeme: String::from("true"),
+                literal: Some(true.into()),
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Number,
+                lexeme: String::from("1"),
+                literal: Some(1.into()),
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Str,
+                lexeme: String::from("\"foo\""),
+                literal: Some(String::from("foo").into()),
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::False,
+                lexeme: String::from("false"),
+                literal: Some(false.into()),
+                line: 0,
+            },
+            Token {
+                token_type: TokenType::Number,
+                lexeme: String::from("69.420"),
+                literal: Some(69.420.into()),
+                line: 0,
+            },
+        ];
+
+        assert_eq!(tokens, expected);
     }
 }

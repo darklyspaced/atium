@@ -23,14 +23,14 @@ impl Parser {
     fn advance(&mut self) -> Result<Token> {
         self.iter
             .next()
-            .ok_or_else(|| SyntaxError::NoExpression.into())
+            .ok_or_else(|| SyntaxError::UnexpectedEOF.into())
     }
 
     /// Peek the iterator, erroring if EOF occurs early -- while an expression was expected
     fn peer(&mut self) -> Result<&Token> {
         self.iter
             .peek()
-            .ok_or_else(|| SyntaxError::NoExpression.into())
+            .ok_or_else(|| SyntaxError::UnexpectedEOF.into())
     }
 }
 
@@ -79,6 +79,12 @@ impl Parser {
             if peek_next.token_type == TokenType::Print {
                 self.iter.next(); // consume print token
                 let print = self.expression().map(Stmt::Print);
+
+                if let Err(e) = print {
+                    statements.push(Err(e));
+                    break;
+                }
+
                 let Some(semi) = self.iter.next() else {
                     statements.push(Err(SyntaxError::ExpectedCharacter(
                         String::from("EOF"),
@@ -88,12 +94,13 @@ impl Parser {
                     break;
                 };
 
-                if !matches!(semi.token_type, TokenType::Semicolon) {
+                if semi.token_type != TokenType::Semicolon {
                     statements.push(Err(SyntaxError::ExpectedCharacter(semi.lexeme, ';').into()));
                 }
 
                 statements.push(print);
             } else {
+                self.iter.next();
                 let expression = self.expression().map(Stmt::Expr);
                 statements.push(expression);
             }
@@ -109,19 +116,18 @@ impl Parser {
         }
     }
 
+    /// Consume the expression, leaving the iterator after the expression
     fn expression(&mut self) -> Result<Expr> {
         self.equality()
     }
 
     fn equality(&mut self) -> Result<Expr> {
         let mut left = self.comparison()?;
-        let mut next = self.peer()?;
 
-        while let TokenType::EqualEqual | TokenType::BangEqual = next.token_type {
+        while let TokenType::EqualEqual | TokenType::BangEqual = self.peer()?.token_type {
             let operator = self.advance()?;
             let right = self.comparison()?;
             left = Expr::Binary(Box::new(left), operator, Box::new(right));
-            next = self.peer()?;
         }
 
         Ok(left)
@@ -131,17 +137,15 @@ impl Parser {
     /// literals
     fn comparison(&mut self) -> Result<Expr> {
         let mut left = self.term()?;
-        let mut next = self.peer()?;
 
         while let TokenType::Greater
         | TokenType::GreaterEqual
         | TokenType::Less
-        | TokenType::LessEqual = next.token_type
+        | TokenType::LessEqual = self.peer()?.token_type
         {
             let operator = self.advance()?;
             let right = self.term()?;
             left = Expr::Binary(Box::new(left), operator, Box::new(right));
-            next = self.peer()?;
         }
 
         Ok(left)
@@ -150,13 +154,11 @@ impl Parser {
     /// Resolves into an [`Expr::Binary`] that represents a sequence of additions and subtractions
     fn term(&mut self) -> Result<Expr> {
         let mut left = self.factor()?;
-        let mut next = self.iter.peek().unwrap();
 
-        while let TokenType::Plus | TokenType::Minus = next.token_type {
-            let operator = self.iter.next().unwrap();
+        while let TokenType::Plus | TokenType::Minus = self.peer()?.token_type {
+            let operator = self.advance()?;
             let right = self.factor()?;
             left = Expr::Binary(Box::new(left), operator, Box::new(right));
-            next = self.iter.peek().unwrap();
         }
 
         Ok(left)
@@ -166,14 +168,12 @@ impl Parser {
     /// divisions
     fn factor(&mut self) -> Result<Expr> {
         let mut left = self.unary()?;
-        let mut next = self.peer()?;
 
-        while let TokenType::Star | TokenType::Slash = next.token_type {
+        while let TokenType::Star | TokenType::Slash = self.peer()?.token_type {
             let operator = self.iter.next().unwrap();
             let right = self.unary()?;
 
             left = Expr::Binary(Box::new(left), operator, Box::new(right));
-            next = self.iter.peek().unwrap();
         }
 
         Ok(left)
@@ -198,17 +198,12 @@ impl Parser {
 
     /// Resolves into a [`Expr::Literal`] that represents, you guessed it, a literal.
     fn primary(&mut self) -> Result<Expr> {
-        let next = self.peer()?;
-
-        match next.token_type {
+        match self.peer()?.token_type {
             TokenType::False
             | TokenType::True
             | TokenType::Nil
             | TokenType::Str
-            | TokenType::Number => {
-                let next = self.advance()?;
-                Ok(Expr::Literal(next))
-            }
+            | TokenType::Number => Ok(Expr::Literal(self.advance()?)),
             TokenType::LeftParen => {
                 self.advance()?; // left paren
                 let expr = self.expression()?;
@@ -223,4 +218,10 @@ impl Parser {
             _ => Err(SyntaxError::NoExpression.into()),
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn add_sub() {}
 }

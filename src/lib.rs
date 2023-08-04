@@ -10,9 +10,7 @@
     clippy::too_many_lines,
     clippy::missing_errors_doc
 )]
-#![feature(type_changing_struct_update)] // allows spread syntax even when generic type paramaters
-                                         // in structs have differing resolved values. see:
-                                         // `transform`
+
 pub mod ast;
 pub mod atium;
 pub mod cli;

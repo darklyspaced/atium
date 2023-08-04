@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use std::{fmt, fmt::Display};
 
 pub mod r#type;
@@ -7,7 +8,7 @@ pub use self::r#type::Type;
 pub use self::value::Value;
 
 /// A token
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Token {
     /// The type of token represented by the struct whether that be a [`TokenType::Str`] or a
     /// [`TokenType::Class`]
@@ -37,7 +38,7 @@ impl Display for Token {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum TokenType {
     // Single-character tokens.
     LeftParen,

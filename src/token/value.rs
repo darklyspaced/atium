@@ -1,10 +1,11 @@
+use serde::{Deserialize, Serialize};
 use std::{fmt, fmt::Display};
 
-macro_rules! impl_integer {
-    ($($type:ty),+) => {
-        $(impl From<$type> for Value {
-            fn from(value: $type) -> Self {
-                Self::Integer(i128::from(value))
+macro_rules! impl_from {
+    ($wrapper:path; $inner_type:ty; $($from:ty),+) => {
+        $(impl From<$from> for Value {
+            fn from(value: $from) -> Self {
+                $wrapper(<$inner_type>::from(value))
             }
         })+
     };
@@ -14,8 +15,9 @@ macro_rules! impl_integer {
 // macro_rules! and_back_again {
 //
 // }
+//
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 pub enum Value {
     String(String),
     Integer(i128),
@@ -24,19 +26,10 @@ pub enum Value {
     Null,
 }
 
-impl_integer!(u8, u16, u32, u64, i8, i16, i32, i64, i128);
-
-impl From<String> for Value {
-    fn from(value: String) -> Self {
-        Self::String(value)
-    }
-}
-
-impl From<bool> for Value {
-    fn from(value: bool) -> Self {
-        Self::Boolean(value)
-    }
-}
+impl_from!(Value::Integer; i128; u8, u16, u32, u64, i8, i16, i32, i64, i128);
+impl_from!(Value::Float; f64; f32, f64);
+impl_from!(Value::String; String; String);
+impl_from!(Value::Boolean; bool; bool);
 
 impl Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

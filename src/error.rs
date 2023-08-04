@@ -17,6 +17,10 @@ pub enum SyntaxError {
 
     #[error("expected an expression, or a statement. idfk, you figure it out")]
     NoExpression,
+
+    /// EOF was found in an unexpected place. don't know what was expected instead of it
+    #[error("unexpected EOF found")]
+    UnexpectedEOF,
 }
 /// Error that is generated during interpretation.
 #[derive(Error, Debug)]
