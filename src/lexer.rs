@@ -211,33 +211,36 @@ mod tests {
     };
 
     #[test]
-    fn print_stmt() {
+    fn print_stmt() -> color_eyre::Result<()> {
         let input = "print 10;";
         let cursor = Cursor::new(input);
 
-        let tokens = cursor.scan_tokens().unwrap();
-        let expected = vec![
-            Token {
-                token_type: TokenType::Print,
-                lexeme: String::from("print"),
-                literal: None,
-                line: 0,
-            },
-            Token {
-                token_type: TokenType::Number,
-                lexeme: String::from("10"),
-                literal: Some(Value::Integer(10)),
-                line: 0,
-            },
-            Token {
-                token_type: TokenType::Semicolon,
-                lexeme: String::from(";"),
-                literal: None,
-                line: 0,
-            },
-        ];
+        let tokens = serde_json::to_string_pretty(&cursor.scan_tokens().unwrap())?;
+        let expected = r#"[
+  {
+    "token_type": "Print",
+    "lexeme": "print",
+    "literal": null,
+    "line": 0
+  },
+  {
+    "token_type": "Number",
+    "lexeme": "10",
+    "literal": {
+      "Integer": 10
+    },
+    "line": 0
+  },
+  {
+    "token_type": "Semicolon",
+    "lexeme": ";",
+    "literal": null,
+    "line": 0
+  }
+]"#;
 
         assert_eq!(tokens, expected);
+        Ok(())
     }
 
     #[test]
