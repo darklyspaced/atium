@@ -3,7 +3,6 @@ use color_eyre::{Report, Result};
 
 use super::token::{Token, TokenType, Value};
 use std::{collections::HashMap, iter::Peekable, str::Chars};
-use TokenType::*;
 
 /// Contains a peekable iterator over a stream of characters (the source code).
 ///
@@ -28,22 +27,22 @@ impl<'a> Cursor<'a> {
             tokens: Vec::default(),
             errors: Vec::default(),
             reserved: HashMap::from([
-                (String::from("and"), And),
-                (String::from("class"), Class),
-                (String::from("else"), Else),
-                (String::from("false"), False),
-                (String::from("fun"), Fun),
-                (String::from("for"), For),
-                (String::from("if"), If),
-                (String::from("nil"), Nil),
-                (String::from("or"), Or),
-                (String::from("print"), Print),
-                (String::from("return"), Return),
-                (String::from("super"), Super),
-                (String::from("this"), This),
-                (String::from("true"), True),
-                (String::from("var"), Var),
-                (String::from("while"), While),
+                (String::from("and"), TokenType::And),
+                (String::from("class"), TokenType::Class),
+                (String::from("else"), TokenType::Else),
+                (String::from("false"), TokenType::False),
+                (String::from("fun"), TokenType::Fun),
+                (String::from("for"), TokenType::For),
+                (String::from("if"), TokenType::If),
+                (String::from("nil"), TokenType::Nil),
+                (String::from("or"), TokenType::Or),
+                (String::from("print"), TokenType::Print),
+                (String::from("return"), TokenType::Return),
+                (String::from("super"), TokenType::Super),
+                (String::from("this"), TokenType::This),
+                (String::from("true"), TokenType::True),
+                (String::from("var"), TokenType::Var),
+                (String::from("while"), TokenType::While),
             ]),
             line: 0,
         }
@@ -55,36 +54,29 @@ impl<'a> Cursor<'a> {
     }
 
     pub fn scan_tokens(mut self) -> Result<Vec<Token>, Vec<Report>> {
-        loop {
-            let next = self.iter.next();
-            if let Some(curr) = next {
-                match curr {
-                    '(' => self.add_token(LeftParen, curr.to_string(), None),
-                    ')' => self.add_token(RightParen, curr.to_string(), None),
-                    '{' => self.add_token(LeftBrace, curr.to_string(), None),
-                    '}' => self.add_token(RightBrace, curr.to_string(), None),
-                    ',' => self.add_token(Comma, curr.to_string(), None),
-                    '.' => self.add_token(Dot, curr.to_string(), None),
-                    '-' => self.add_token(Minus, curr.to_string(), None),
-                    '+' => self.add_token(Plus, curr.to_string(), None),
-                    ';' => self.add_token(Semicolon, curr.to_string(), None),
-                    '*' => self.add_token(Star, curr.to_string(), None),
-                    '!' => self.handle_two_char_op(curr, '=', BangEqual, Bang),
-                    '=' => self.handle_two_char_op(curr, '=', EqualEqual, EqualEqual),
-                    '<' => self.handle_two_char_op(curr, '=', LessEqual, Less),
-                    '>' => self.handle_two_char_op(curr, '=', GreaterEqual, Greater),
-                    '/' => self.handle_comment(curr),
-                    '"' => self.handle_string(),
-                    '0'..='9' => self.handle_number(curr),
-                    'a'..='z' | 'A'..='Z' => self.handle_ident(curr),
-                    '\n' => self.line += 1,
-                    '\r' | '\t' | ' ' => (),
-                    _ => self
-                        .errors
-                        .push(SyntaxError::UnexpectedCharacter(curr).into()),
-                };
-            } else {
-                break;
+        while let Some(c) = self.iter.next() {
+            match c {
+                '(' => self.add_token(TokenType::LeftParen, c.to_string(), None),
+                ')' => self.add_token(TokenType::RightParen, c.to_string(), None),
+                '{' => self.add_token(TokenType::LeftBrace, c.to_string(), None),
+                '}' => self.add_token(TokenType::RightBrace, c.to_string(), None),
+                ',' => self.add_token(TokenType::Comma, c.to_string(), None),
+                '.' => self.add_token(TokenType::Dot, c.to_string(), None),
+                '-' => self.add_token(TokenType::Minus, c.to_string(), None),
+                '+' => self.add_token(TokenType::Plus, c.to_string(), None),
+                ';' => self.add_token(TokenType::Semicolon, c.to_string(), None),
+                '*' => self.add_token(TokenType::Star, c.to_string(), None),
+                '!' => self.branching_char(c, '=', TokenType::BangEqual, TokenType::Bang),
+                '=' => self.branching_char(c, '=', TokenType::EqualEqual, TokenType::Equal),
+                '<' => self.branching_char(c, '=', TokenType::LessEqual, TokenType::Less),
+                '>' => self.branching_char(c, '=', TokenType::GreaterEqual, TokenType::Greater),
+                '/' => self.handle_comment(c),
+                '"' => self.handle_string(),
+                '0'..='9' => self.handle_number(c),
+                'a'..='z' | 'A'..='Z' => self.handle_ident(c),
+                '\n' => self.line += 1,
+                '\r' | '\t' | ' ' => (),
+                _ => self.errors.push(SyntaxError::UnexpectedCharacter(c).into()),
             }
         }
 
@@ -95,7 +87,7 @@ impl<'a> Cursor<'a> {
         }
     }
 
-    pub fn handle_two_char_op(
+    pub fn branching_char(
         &mut self,
         curr: char,
         predicate: char,
@@ -131,7 +123,7 @@ impl<'a> Cursor<'a> {
                 _ => self.add_token(tt, ident, None),
             }
         } else {
-            self.add_token(Identifier, ident, None);
+            self.add_token(TokenType::Identifier, ident, None);
         }
     }
 
@@ -155,13 +147,13 @@ impl<'a> Cursor<'a> {
 
         if float {
             self.add_token(
-                Number,
+                TokenType::Number,
                 lexeme,
                 Some(Value::Float(pre_literal.parse::<f64>().unwrap())),
             );
         } else {
             self.add_token(
-                Number,
+                TokenType::Number,
                 lexeme,
                 Some(Value::Integer(pre_literal.parse::<i128>().unwrap())),
             );
@@ -172,7 +164,7 @@ impl<'a> Cursor<'a> {
         let mut chars = vec!['"'];
         let (token, lit) = loop {
             match self.iter.next() {
-                Some('"') => break (Str, chars[1..].iter().collect::<String>()),
+                Some('"') => break (TokenType::String, chars[1..].iter().collect::<String>()),
                 Some(char) => chars.push(char),
                 None => self
                     .errors
@@ -198,7 +190,7 @@ impl<'a> Cursor<'a> {
             }
             self.line += 1;
         } else {
-            self.add_token(Slash, curr.to_string(), None);
+            self.add_token(TokenType::Slash, curr.to_string(), None);
         }
     }
 }
@@ -275,7 +267,7 @@ mod tests {
                 line: 0,
             },
             Token {
-                token_type: TokenType::Str,
+                token_type: TokenType::String,
                 lexeme: String::from("\"string\""),
                 literal: Some(Value::String(String::from("string"))),
                 line: 0,
@@ -344,7 +336,7 @@ mod tests {
                 line: 0,
             },
             Token {
-                token_type: TokenType::Str,
+                token_type: TokenType::String,
                 lexeme: String::from("\"foo\""),
                 literal: Some(String::from("foo").into()),
                 line: 0,

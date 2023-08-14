@@ -11,12 +11,6 @@ macro_rules! impl_from {
     };
 }
 
-// parse the enum and generate Value::T(ty) -> ty
-// macro_rules! and_back_again {
-//
-// }
-//
-
 #[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 pub enum Value {
     String(String),

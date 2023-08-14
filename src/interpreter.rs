@@ -19,6 +19,7 @@ impl Interpreter {
             match stmt {
                 Stmt::Expr(expr) => errors.push(expression(expr).err()),
                 Stmt::Print(expr) => errors.push(print(expr).err()),
+                _ => unimplemented!(),
             };
         }
         Err(errors.into_iter().flatten().collect())
@@ -93,6 +94,7 @@ fn expression(expr: Expr) -> Result<Value> {
                 _ => Err(RuntimeError::InvalidOperator(op.lexeme, vec!['+', '/', '-', '*']).into()),
             }
         }
+        _ => unimplemented!(),
     }
 }
 

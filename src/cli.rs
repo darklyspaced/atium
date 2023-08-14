@@ -7,20 +7,18 @@ use std::{
     io::{stdin, BufRead, BufReader, Read},
 };
 
-/// The outward facing CLI for client that reports errors, handles input and more
+/// The outward facing CLI that handles command line input
 ///
-/// This CLI passes all input to [`Atium`] which handles the internal logic and in turn gets errors
-/// from it and pretty prints them out.
+/// This CLI passes all input to [`Atium`] which handles the internal logic
 #[derive(Parser)]
 #[command(author, version, about)]
 pub struct Cli {
     pub script: Option<String>,
+    #[arg(long)]
+    pub ast: bool,
 }
 
 /// Reads source code from file
-///
-/// # Errors
-/// 1. Errors when it fails to read the provided file
 pub fn run_file(file: &str) -> Result<()> {
     let mut buf = String::default();
     let f_handle = File::open(file).wrap_err(format!("reading \"{file}\""))?;
@@ -41,9 +39,6 @@ fn report(errors: &[Report]) {
 }
 
 /// Reads source code line by line, as user enters it
-///
-/// # Errors
-/// 1. Errors when it fails to read a line
 pub fn run_repl() -> Result<()> {
     let mut input = stdin().lock();
     let mut buf = String::new();

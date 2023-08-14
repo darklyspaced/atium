@@ -7,6 +7,10 @@ use std::fmt;
 pub enum Stmt {
     Expr(Expr),
     Print(Expr),
+    Var {
+        name: Token,
+        initialiser: Option<Expr>,
+    },
 }
 
 /// An expression: something that can be evalutated and always produces a result
@@ -16,6 +20,7 @@ pub enum Expr {
     Grouping(Box<Expr>),
     Literal(Token),
     Unary(Token, Box<Expr>),
+    Variable(Token),
 }
 
 impl fmt::Display for Expr {
@@ -27,6 +32,7 @@ impl fmt::Display for Expr {
             Self::Unary(op, expr) => write!(f, "({op}{expr})"),
             Self::Literal(lit) => write!(f, "{lit}"),
             Self::Grouping(expr) => write!(f, "([{expr}])"),
+            Self::Variable(tok) => write!(f, "{tok}"),
         }
     }
 }
