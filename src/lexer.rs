@@ -53,7 +53,7 @@ impl<'a> Cursor<'a> {
         self.tokens.push(token);
     }
 
-    pub fn scan_tokens(mut self) -> Result<Vec<Token>, Vec<Report>> {
+    pub fn lex(mut self) -> Result<Vec<Token>, Vec<Report>> {
         while let Some(c) = self.iter.next() {
             match c {
                 '(' => self.add_token(TokenType::LeftParen, c.to_string(), None),
@@ -207,7 +207,7 @@ mod tests {
         let input = "print 10;";
         let cursor = Cursor::new(input);
 
-        let tokens = serde_json::to_string_pretty(&cursor.scan_tokens().unwrap())?;
+        let tokens = serde_json::to_string_pretty(&cursor.lex().unwrap())?;
         let expected = r#"[
   {
     "token_type": "Print",
@@ -240,7 +240,7 @@ mod tests {
         let input = r#"print 10; print "string";"#;
         let cursor = Cursor::new(input);
 
-        let tokens = cursor.scan_tokens().unwrap();
+        let tokens = cursor.lex().unwrap();
         let expected = vec![
             Token {
                 token_type: TokenType::Print,
@@ -288,7 +288,7 @@ mod tests {
         let input = "// there should be no tokens!";
         let cursor = Cursor::new(input);
 
-        let tokens = cursor.scan_tokens().unwrap();
+        let tokens = cursor.lex().unwrap();
 
         assert_eq!(tokens, vec![]);
     }
@@ -298,7 +298,7 @@ mod tests {
         let input = "var stormlight";
         let cursor = Cursor::new(input);
 
-        let tokens = cursor.scan_tokens().unwrap();
+        let tokens = cursor.lex().unwrap();
         let expected = vec![
             Token {
                 token_type: TokenType::Var,
@@ -321,7 +321,7 @@ mod tests {
         let input = r#"true 1 "foo" false 69.420"#;
         let cursor = Cursor::new(input);
 
-        let tokens = cursor.scan_tokens().unwrap();
+        let tokens = cursor.lex().unwrap();
         let expected = vec![
             Token {
                 token_type: TokenType::True,

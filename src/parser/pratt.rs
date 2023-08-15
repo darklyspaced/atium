@@ -1,120 +1,96 @@
 use color_eyre::Result;
 
-use super::{
-    super::{
-        ast::{Expr, Stmt},
-        error::SyntaxError,
-        token::TokenType,
-    },
-    Parser,
-};
+use super::Parser;
+use crate::{ast::Expr, error::SyntaxError, impetuous::Impetuous, token::TokenType};
 
 impl Parser {
-    pub(super) fn declaration(&mut self) -> Result<Stmt> {
-        match self.peer()?.token_type {
-            TokenType::Var => self.var_declaration(),
-            _ => self.statement(),
-        }
+    pub fn expression(&mut self) -> Expr {
+        self.expr(0).unwrap()
     }
 
-    fn var_declaration(&mut self) -> Result<Stmt> {
-        color_eyre::eyre::bail!("");
-    }
-
-    fn statement(&mut self) -> Result<Stmt> {
-        match self.peer()?.token_type {
-            TokenType::Print => {
-                self.iter.next(); // consume print token
-                let print = self.expression().map(Stmt::Print)?;
-
-                let Some(semi) = self.iter.next() else {
-                 return Err(SyntaxError::ExpectedCharacter(
-                        String::from("EOF"),
-                        ';',
-                    )
-                    .into());
-                };
-
-                if semi.token_type != TokenType::Semicolon {
-                    return Err(SyntaxError::ExpectedCharacter(semi.lexeme, ';').into());
-                }
-
-                Ok(print)
+    fn expr(&mut self, min_bp: u8) -> Result<Expr> {
+        let mut left = match self.iter.peer()?.token_type {
+            TokenType::Number | TokenType::String | TokenType::True | TokenType::False => {
+                Expr::Literal(self.iter.advance()?)
             }
-            _ => {
-                self.iter.next();
-                self.expression().map(Stmt::Expr)
-            }
-        }
-    }
-
-    /// Consume the expression, leaving the iterator after the expression
-    fn expression(&mut self) -> Result<Expr> {
-        self.equality()
-    }
-
-    fn equality(&mut self) -> Result<Expr> {
-        self.repeat_op(
-            Parser::comparison,
-            &[TokenType::EqualEqual, TokenType::BangEqual],
-        )
-    }
-
-    fn comparison(&mut self) -> Result<Expr> {
-        self.repeat_op(
-            Parser::term,
-            &[
-                TokenType::Greater,
-                TokenType::GreaterEqual,
-                TokenType::Less,
-                TokenType::LessEqual,
-            ],
-        )
-    }
-
-    fn term(&mut self) -> Result<Expr> {
-        self.repeat_op(Parser::factor, &[TokenType::Plus, TokenType::Minus])
-    }
-
-    fn factor(&mut self) -> Result<Expr> {
-        self.repeat_op(Parser::unary, &[TokenType::Star, TokenType::Slash])
-    }
-
-    fn unary(&mut self) -> Result<Expr> {
-        let next = self.peer()?;
-
-        match next.token_type {
-            TokenType::Bang | TokenType::Minus => {
-                let next = self.advance()?;
-
-                Ok(Expr::Unary(next, Box::new(self.unary()?)))
-            }
-            TokenType::Plus => {
-                color_eyre::eyre::bail!("'+' cannot be used as a unary operator")
-            }
-            _ => self.primary(),
-        }
-    }
-
-    fn primary(&mut self) -> Result<Expr> {
-        match self.peer()?.token_type {
-            TokenType::False
-            | TokenType::True
-            | TokenType::Nil
-            | TokenType::String
-            | TokenType::Number => Ok(Expr::Literal(self.advance()?)),
             TokenType::LeftParen => {
-                self.advance()?; // left paren
-                let expr = self.expression()?;
+                self.iter.advance()?; // consume LeftParen
 
-                let next = self.advance()?;
-                if TokenType::RightParen == next.token_type {
-                    return Ok(Expr::Grouping(Box::new(expr)));
+                let inner = self.expr(0)?;
+
+                if self.iter.peer()?.token_type != TokenType::RightParen {
+                    return Err(
+                        SyntaxError::ExpectedCharacter(self.iter.advance()?.lexeme, ')').into(),
+                    );
+                }
+                self.iter.advance()?; // consume RightParen
+
+                Expr::Grouping(Box::new(inner))
+            }
+            TokenType::Minus | TokenType::Bang => {
+                let op = self.iter.advance()?;
+                let (_, r_bp) = prefix_bp(&op.token_type);
+                let right = self.expr(r_bp)?;
+                Expr::Unary(op, Box::new(right))
+            }
+            _ => unimplemented!(),
+        };
+
+        loop {
+            let op = match self.iter.peek() {
+                Some(tok) => tok,
+                None => break,
+            };
+
+            if let Some((l_bp, r_bp)) = infix_bp(&op.token_type) {
+                if l_bp < min_bp {
+                    break;
                 }
 
-                Err(SyntaxError::ExpectedCharacter(next.lexeme, ')').into())
+                let op = self.iter.advance()?; // consume operator
+                let right = self.expr(r_bp)?;
+
+                left = Expr::Binary(Box::new(left), op, Box::new(right));
+
+                continue;
             }
-            _ => Err(SyntaxError::NoExpression.into()),
+
+            break;
         }
+
+        Ok(left)
+    }
+}
+
+/// Returns the binding power for an infix operator
+fn infix_bp(op: &TokenType) -> Option<(u8, u8)> {
+    let bp = match op {
+        TokenType::Equal => (2, 1),
+        TokenType::Plus | TokenType::Minus => (1, 2),
+        TokenType::Star | TokenType::Slash => (3, 4),
+        _ => return None,
+    };
+
+    Some(bp)
+}
+
+/// Returns the binding power of a prefix operator
+fn prefix_bp(op: &TokenType) -> ((), u8) {
+    match op {
+        TokenType::Minus | TokenType::Bang => ((), 5),
+        _ => panic!("bad op: {:?}", op),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn chain() {
+        use super::Parser;
+        use crate::lexer::Cursor;
+        let cursor = Cursor::new("(10 + 3) * 4 - 3");
+        let tokens = cursor.lex().unwrap();
+        let expr = Parser::new(tokens).expression();
+        panic!("{expr}");
     }
 }

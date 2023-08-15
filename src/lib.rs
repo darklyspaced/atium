@@ -15,6 +15,7 @@ pub mod ast;
 pub mod atium;
 pub mod cli;
 pub mod error;
+pub mod impetuous;
 pub mod interpreter;
 pub mod lexer;
 pub mod parser;

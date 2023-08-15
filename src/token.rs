@@ -10,7 +10,7 @@ pub use self::value::Value;
 /// A token
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Token {
-    /// The type of token represented by the struct whether that be a [`TokenType::Str`] or a
+    /// The type of token represented by the struct whether that be a [`TokenType::String`] or a
     /// [`TokenType::Class`]
     pub token_type: TokenType,
     /// The textual representation of the `Token`: "cat"

@@ -52,7 +52,13 @@ pub fn run_repl() -> Result<()> {
 }
 
 fn run(src: &str) -> Result<(), Vec<Report>> {
-    let atium = Atium::new(src);
-    atium.lex()?.parse()?.interpret()?;
+    use crate::lexer::Cursor;
+    use crate::parser::Parser;
+    let cursor = Cursor::new("(((0)))");
+    let tokens = cursor.lex().unwrap();
+    let expr = Parser::new(tokens).expression();
+    println!("{expr}");
+    // let atium = Atium::new(src);
+    // atium.lex()?.parse()?.interpret()?;
     Ok(())
 }

@@ -44,13 +44,11 @@ impl<State> Atium<'_, State> {
 
 impl<'a> Atium<'a, Lexing> {
     pub fn lex(self) -> AResult<'a, Parsing> {
-        self.cursor.scan_tokens().map(|ok| {
-            Atium {
-                state: PhantomData::<Parsing>,
-                parser: Parser::new(ok),
-                cursor: Cursor::new(""),
-                interpeter: Interpreter::new(vec![]),
-            }
+        self.cursor.lex().map(|ok| Atium {
+            state: PhantomData::<Parsing>,
+            parser: Parser::new(ok),
+            cursor: Cursor::new(""),
+            interpeter: Interpreter::new(vec![]),
         })
     }
 }
