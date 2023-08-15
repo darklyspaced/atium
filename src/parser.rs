@@ -4,7 +4,7 @@ use color_eyre::Result;
 
 use super::{
     ast::{Expr, Stmt},
-    error::SyntaxError,
+    impetuous::Impetuous,
     token::{Token, TokenType},
 };
 
@@ -24,10 +24,10 @@ impl Parser {
 
     /// Converts a stream of tokens into an abstract syntax tree
     pub fn parse(&mut self) -> Result<Vec<Stmt>, Vec<color_eyre::Report>> {
-        let mut statements: Vec<Result<Stmt>> = vec![];
+        let statements: Vec<Result<Stmt>> = vec![];
 
         while let Some(_) = self.iter.peek() {
-            statements.push(self.declaration());
+            // statements.push(self.declaration());
         }
 
         if statements.iter().any(result::Result::is_err) {
@@ -40,18 +40,8 @@ impl Parser {
         }
     }
 
-    /// Advance the iterator, erroring if EOF occurs early -- while an expression was expected
-    fn advance(&mut self) -> Result<Token> {
-        self.iter
-            .next()
-            .ok_or_else(|| SyntaxError::UnexpectedEOF.into())
-    }
-
-    /// Peek the iterator, erroring if EOF occurs early -- while an expression was expected
-    fn peer(&mut self) -> Result<&Token> {
-        self.iter
-            .peek()
-            .ok_or_else(|| SyntaxError::UnexpectedEOF.into())
+    fn declaration(&self) -> Result<()> {
+        Ok(())
     }
 
     fn repeat_op(
@@ -65,7 +55,7 @@ impl Parser {
             match self.iter.peek() {
                 Some(token) => {
                     if tt.contains(&token.token_type) {
-                        let operator = self.advance()?;
+                        let operator = self.iter.advance()?;
                         let right = func(self)?;
                         left = Expr::Binary(Box::new(left), operator, Box::new(right));
                     } else {
@@ -117,7 +107,7 @@ mod tests {
     fn add_sub() {
         let src = "print 10+5--4+1;";
         let cursor = Cursor::new(src);
-        let tokens = cursor.scan_tokens().unwrap();
+        let tokens = cursor.lex().unwrap();
 
         let mut parser = Parser::new(tokens);
         let result = parser.parse().unwrap();
@@ -213,7 +203,7 @@ mod tests {
     pub fn grouping() {
         let src = "print (10+5)*3/(2--7);";
         let cursor = Cursor::new(src);
-        let tokens = cursor.scan_tokens().unwrap();
+        let tokens = cursor.lex().unwrap();
 
         let mut parser = Parser::new(tokens);
         let result = parser.parse().unwrap();
