@@ -2,13 +2,15 @@ use std::{iter::Peekable, result, vec::IntoIter};
 
 use color_eyre::Result;
 
+use crate::error::SyntaxError;
+
 use super::{
     ast::{Expr, Stmt},
     impetuous::Impetuous,
     token::{Token, TokenType},
 };
 
-mod pratt;
+mod expr;
 
 pub(super) struct Parser {
     /// peekable iterator over tokens
@@ -24,10 +26,10 @@ impl Parser {
 
     /// Converts a stream of tokens into an abstract syntax tree
     pub fn parse(&mut self) -> Result<Vec<Stmt>, Vec<color_eyre::Report>> {
-        let statements: Vec<Result<Stmt>> = vec![];
+        let mut statements: Vec<Result<Stmt>> = vec![];
 
         while let Some(_) = self.iter.peek() {
-            // statements.push(self.declaration());
+            statements.push(self.statement());
         }
 
         if statements.iter().any(result::Result::is_err) {
@@ -40,8 +42,28 @@ impl Parser {
         }
     }
 
-    fn declaration(&self) -> Result<()> {
-        Ok(())
+    fn statement(&mut self) -> Result<Stmt> {
+        match self.iter.peer()?.token_type {
+            TokenType::Print => {
+                self.iter.advance()?; // consume the print token
+                let expr = self.expression()?;
+
+                match self.iter.next() {
+                    Some(tok) => {
+                        if tok.token_type != TokenType::Semicolon {
+                            return Err(SyntaxError::ExpectedCharacter(
+                                self.iter.advance()?.lexeme,
+                                ';',
+                            )
+                            .into());
+                        }
+                        Ok(Stmt::Print(expr))
+                    }
+                    None => Err(SyntaxError::ExpectedCharacter(String::from("EOF"), ';').into()),
+                }
+            }
+            _ => Ok(Stmt::Expr(self.expression()?)),
+        }
     }
 
     fn repeat_op(
@@ -69,7 +91,7 @@ impl Parser {
         Ok(left)
     }
 
-    /// Prevents error cascading (one error causing a bunch of other ones later in the program)
+    /// Prevents error cascading.
     ///
     /// Discards tokens until the next statement is reached. Invoked when an error is thrown while
     /// parsing. Discarded tokens were part of a statement that caused an error and therefore were

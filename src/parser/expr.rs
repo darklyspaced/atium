@@ -4,8 +4,8 @@ use super::Parser;
 use crate::{ast::Expr, error::SyntaxError, impetuous::Impetuous, token::TokenType};
 
 impl Parser {
-    pub fn expression(&mut self) -> Expr {
-        self.expr(0).unwrap()
+    pub fn expression(&mut self) -> Result<Expr> {
+        self.expr(0)
     }
 
     fn expr(&mut self, min_bp: u8) -> Result<Expr> {
@@ -15,7 +15,6 @@ impl Parser {
             }
             TokenType::LeftParen => {
                 self.iter.advance()?; // consume LeftParen
-
                 let inner = self.expr(0)?;
 
                 if self.iter.peer()?.token_type != TokenType::RightParen {
@@ -51,7 +50,6 @@ impl Parser {
                 let right = self.expr(r_bp)?;
 
                 left = Expr::Binary(Box::new(left), op, Box::new(right));
-
                 continue;
             }
 
@@ -65,7 +63,7 @@ impl Parser {
 /// Returns the binding power for an infix operator
 fn infix_bp(op: &TokenType) -> Option<(u8, u8)> {
     let bp = match op {
-        TokenType::Equal => (2, 1),
+        TokenType::Equal | TokenType::EqualEqual => (2, 1),
         TokenType::Plus | TokenType::Minus => (1, 2),
         TokenType::Star | TokenType::Slash => (3, 4),
         _ => return None,
@@ -79,18 +77,5 @@ fn prefix_bp(op: &TokenType) -> ((), u8) {
     match op {
         TokenType::Minus | TokenType::Bang => ((), 5),
         _ => panic!("bad op: {:?}", op),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn chain() {
-        use super::Parser;
-        use crate::lexer::Cursor;
-        let cursor = Cursor::new("(10 + 3) * 4 - 3");
-        let tokens = cursor.lex().unwrap();
-        let expr = Parser::new(tokens).expression();
-        panic!("{expr}");
     }
 }
