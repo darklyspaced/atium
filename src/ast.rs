@@ -31,7 +31,7 @@ impl fmt::Display for Expr {
             }
             Self::Unary(op, expr) => write!(f, "({op}{expr})"),
             Self::Literal(lit) => write!(f, "{lit}"),
-            Self::Grouping(expr) => write!(f, "([{expr}])"),
+            Self::Grouping(expr) => write!(f, "[{expr}]"),
             Self::Variable(tok) => write!(f, "{tok}"),
         }
     }

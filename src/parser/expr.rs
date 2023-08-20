@@ -9,25 +9,23 @@ impl Parser {
     }
 
     fn expr(&mut self, min_bp: u8) -> Result<Expr> {
-        let mut left = match self.iter.peer()?.token_type {
+        let mut left = match self.peer()?.token_type {
             TokenType::Number | TokenType::String | TokenType::True | TokenType::False => {
-                Expr::Literal(self.iter.advance()?)
+                Expr::Literal(self.advance()?)
             }
             TokenType::LeftParen => {
-                self.iter.advance()?; // consume LeftParen
+                self.advance()?; // consume LeftParen
                 let inner = self.expr(0)?;
 
-                if self.iter.peer()?.token_type != TokenType::RightParen {
-                    return Err(
-                        SyntaxError::ExpectedCharacter(self.iter.advance()?.lexeme, ')').into(),
-                    );
+                if self.peer()?.token_type != TokenType::RightParen {
+                    return Err(SyntaxError::ExpectedCharacter(self.advance()?.lexeme, ')').into());
                 }
-                self.iter.advance()?; // consume RightParen
+                self.advance()?; // consume RightParen
 
                 Expr::Grouping(Box::new(inner))
             }
             TokenType::Minus | TokenType::Bang => {
-                let op = self.iter.advance()?;
+                let op = self.advance()?;
                 let (_, r_bp) = prefix_bp(&op.token_type);
                 let right = self.expr(r_bp)?;
                 Expr::Unary(op, Box::new(right))
@@ -46,7 +44,7 @@ impl Parser {
                     break;
                 }
 
-                let op = self.iter.advance()?; // consume operator
+                let op = self.advance()?; // consume operator
                 let right = self.expr(r_bp)?;
 
                 left = Expr::Binary(Box::new(left), op, Box::new(right));
@@ -63,9 +61,9 @@ impl Parser {
 /// Returns the binding power for an infix operator
 fn infix_bp(op: &TokenType) -> Option<(u8, u8)> {
     let bp = match op {
-        TokenType::Equal | TokenType::EqualEqual => (2, 1),
-        TokenType::Plus | TokenType::Minus => (1, 2),
-        TokenType::Star | TokenType::Slash => (3, 4),
+        TokenType::EqualEqual => (2, 1),
+        TokenType::Plus | TokenType::Minus => (3, 4),
+        TokenType::Star | TokenType::Slash => (5, 6),
         _ => return None,
     };
 
@@ -75,7 +73,7 @@ fn infix_bp(op: &TokenType) -> Option<(u8, u8)> {
 /// Returns the binding power of a prefix operator
 fn prefix_bp(op: &TokenType) -> ((), u8) {
     match op {
-        TokenType::Minus | TokenType::Bang => ((), 5),
+        TokenType::Minus | TokenType::Bang => ((), 7),
         _ => panic!("bad op: {:?}", op),
     }
 }

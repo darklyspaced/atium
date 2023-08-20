@@ -12,15 +12,65 @@ use super::{
 
 mod expr;
 
+// pub(super) struct Parser {
+//     /// peekable iterator over tokens
+//     pub iter: Peekable<IntoIter<Token>>,
+// }
+
 pub(super) struct Parser {
-    /// peekable iterator over tokens
-    pub iter: Peekable<IntoIter<Token>>,
+    iter: Peekable<IntoIter<Token>>,
+    prev: Option<Token>,
+}
+
+// make this all generic behaviour that can be overriden if need be.
+impl Impetuous for Parser {
+    type Scrutinee = TokenType;
+    /// Override the `next` function on Iterators, advancing one step forwards
+    fn step(&mut self) -> Option<Token> {
+        self.prev = self.iter.clone().next();
+        self.iter.next()
+    }
+
+    /// Access the element returned last
+    fn prev(&self) -> Option<&Token> {
+        self.prev.as_ref()
+    }
+
+    /// Advance the iterator, erroring if EOF occurs prematurely
+    fn advance(&mut self) -> Result<Token> {
+        self.step().ok_or(SyntaxError::UnexpectedEOF.into())
+    }
+
+    /// Peek the iterator, erroring if EOF occurs early
+    fn peer(&mut self) -> Result<Token> {
+        let mut iter = self.iter.clone();
+        iter.next().ok_or(SyntaxError::UnexpectedEOF.into())
+    }
+
+    /// Consumes the next item, verifing that it is the right value
+    fn eat(&mut self, expected: TokenType) -> Option<bool> {
+        Some(matches!(self.step()?, expected))
+    }
+
+    /// Peeks the next item, verifing that it is the right value
+    fn taste(&mut self, expected: TokenType) -> Result<bool> {
+        Ok(matches!(self.peer()?, expected))
+    }
+}
+
+impl Iterator for Parser {
+    type Item = Token;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
+    }
 }
 
 impl Parser {
     pub fn new(token_stream: Vec<Token>) -> Self {
         Self {
             iter: token_stream.into_iter().peekable(),
+            prev: None,
         }
     }
 
@@ -42,17 +92,42 @@ impl Parser {
         }
     }
 
+    fn declaration(&mut self) -> Result<Stmt> {
+        loop {
+            if self.taste(TokenType::Var).unwrap() {
+                self.advance()?;
+                if let Err(_) = self.var_decl() {
+                    let prev = &self.prev().unwrap().token_type.clone();
+                    self.recover(prev);
+                }
+            } else {
+                if let Err(_) = self.statement() {
+                    let prev = &self.prev().unwrap().token_type.clone();
+                    self.recover(prev);
+                }
+            }
+        }
+    }
+
+    fn var_decl(&mut self) -> Result<()> {
+        if !(self.advance()?.token_type == TokenType::Identifier) {
+            panic!("expected variable name");
+        }
+
+        Ok(())
+    }
+
     fn statement(&mut self) -> Result<Stmt> {
-        match self.iter.peer()?.token_type {
+        match self.peer()?.token_type {
             TokenType::Print => {
-                self.iter.advance()?; // consume the print token
+                self.advance()?; // consume the print token
                 let expr = self.expression()?;
 
-                match self.iter.next() {
+                match self.step() {
                     Some(tok) => {
                         if tok.token_type != TokenType::Semicolon {
                             return Err(SyntaxError::ExpectedCharacter(
-                                self.iter.advance()?.lexeme,
+                                self.advance()?.lexeme,
                                 ';',
                             )
                             .into());
@@ -66,40 +141,15 @@ impl Parser {
         }
     }
 
-    fn repeat_op(
-        &mut self,
-        func: impl Fn(&mut Parser) -> Result<Expr>,
-        tt: &[TokenType],
-    ) -> Result<Expr> {
-        let mut left = func(self)?;
-
-        loop {
-            match self.iter.peek() {
-                Some(token) => {
-                    if tt.contains(&token.token_type) {
-                        let operator = self.iter.advance()?;
-                        let right = func(self)?;
-                        left = Expr::Binary(Box::new(left), operator, Box::new(right));
-                    } else {
-                        break;
-                    }
-                }
-                None => break,
-            }
-        }
-
-        Ok(left)
-    }
-
     /// Prevents error cascading.
     ///
     /// Discards tokens until the next statement is reached. Invoked when an error is thrown while
     /// parsing. Discarded tokens were part of a statement that caused an error and therefore were
     /// most likely erroneous themselves.
-    fn sync(&mut self, prev: &TokenType) -> Option<()> {
-        self.iter.next()?;
+    fn recover(&mut self, prev: &TokenType) -> Option<()> {
+        self.step()?;
 
-        if prev == &TokenType::Semicolon {
+        if *prev == TokenType::Semicolon {
             return Some(());
         }
 

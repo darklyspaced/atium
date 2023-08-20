@@ -1,25 +1,35 @@
 use color_eyre::Result;
 
-use super::error::SyntaxError;
-
+/// Extension for the [`Iterator`] trait that provides a bunch of optional nice
+/// to have functions
 pub trait Impetuous: Iterator {
-    /// Advance the iterator, erroring if EOF occurs prematurely
-    fn advance(&mut self) -> Result<<Self as Iterator>::Item>;
-
-    /// Peek the iterator, erroring if EOF occurs early
-    fn peer(&mut self) -> Result<<Self as Iterator>::Item>;
-}
-
-impl<T> Impetuous for T
-where
-    T: Iterator + Clone,
-{
-    fn peer(&mut self) -> Result<<T as Iterator>::Item> {
-        let mut iter = self.clone(); // iterator cloning is cheap
-        iter.advance()
+    type Scrutinee;
+    fn step(&mut self) -> Option<Self::Item> {
+        unimplemented!()
     }
 
-    fn advance(&mut self) -> Result<<T as Iterator>::Item> {
-        self.next().ok_or_else(|| SyntaxError::UnexpectedEOF.into())
+    /// Access the element returned last
+    fn prev(&self) -> Option<&Self::Item> {
+        unimplemented!()
+    }
+
+    /// Advance the iterator, erroring if EOF occurs prematurely
+    fn advance(&mut self) -> Result<Self::Item> {
+        unimplemented!()
+    }
+
+    /// Peek the iterator, erroring if EOF occurs early
+    fn peer(&mut self) -> Result<Self::Item> {
+        unimplemented!()
+    }
+
+    /// Consumes the next item, verifing that it is the right value
+    fn eat(&mut self, _expected: Self::Scrutinee) -> Option<bool> {
+        unimplemented!()
+    }
+
+    /// Peeks the next item, verifing that it is the right value
+    fn taste(&mut self, _expected: Self::Scrutinee) -> Result<bool> {
+        unimplemented!()
     }
 }
