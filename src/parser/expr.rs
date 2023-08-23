@@ -19,7 +19,11 @@ impl Parser {
                 let inner = self.expr(0)?;
 
                 if self.peer()?.token_type != TokenType::RightParen {
-                    return Err(SyntaxError::ExpectedCharacter(self.advance()?.lexeme, ')').into());
+                    return Err(SyntaxError::ExpectedCharacter {
+                        expected: ')',
+                        found: self.advance()?.lexeme,
+                    }
+                    .into());
                 }
                 self.advance()?; // consume RightParen
 
@@ -34,12 +38,7 @@ impl Parser {
             x => unimplemented!("{x:?}"),
         };
 
-        loop {
-            let op = match self.iter.peek() {
-                Some(tok) => tok,
-                None => break,
-            };
-
+        while let Some(op) = self.iter.peek() {
             if let Some((l_bp, r_bp)) = infix_bp(&op.token_type) {
                 if l_bp < min_bp {
                     break;

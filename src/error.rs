@@ -12,11 +12,8 @@ pub enum SyntaxError {
     #[error("an unexpected character was found while lexing: '{0}'")]
     UnexpectedCharacter(char),
 
-    #[error("expected: '{1}' | found: '{0}'")]
-    ExpectedCharacter(String, char),
-
-    #[error("expected an expression, or a statement. idfk, you figure it out")]
-    NoExpression,
+    #[error("expected: '{expected}' | found: '{found}'")]
+    ExpectedCharacter { found: String, expected: char },
 
     #[error("expected: identifier | found: {0}")]
     ExpectedIdent(String),

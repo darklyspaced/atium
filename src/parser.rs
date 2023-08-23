@@ -5,7 +5,7 @@ use color_eyre::Result;
 use crate::error::SyntaxError;
 
 use super::{
-    ast::{Expr, Stmt},
+    ast::Stmt,
     impetuous::Impetuous,
     token::{Token, TokenType},
 };
@@ -29,7 +29,7 @@ impl Parser {
     pub fn parse(&mut self) -> Result<Vec<Stmt>, Vec<color_eyre::Report>> {
         let mut statements: Vec<Result<Stmt>> = vec![];
 
-        while let Some(_) = self.iter.peek() {
+        while self.iter.peek().is_some() {
             statements.push(self.declaration());
         }
 
@@ -65,33 +65,29 @@ impl Parser {
     }
 
     fn var_decl(&mut self) -> Result<Stmt> {
-        let ident = match self.eat(TokenType::Identifier) {
-            Some(tok) => tok,
-            None => match self.prev() {
+        let Some(ident) = self.eat(TokenType::Identifier) else {
+            match self.prev() {
                 Some(tok) => {
                     return Err(SyntaxError::ExpectedIdent(String::from(&tok.lexeme)).into())
                 }
                 None => return Err(SyntaxError::ExpectedIdent(String::from("EOF")).into()),
-            },
+            }
         };
 
-        let mut initial_value = None;
-        if self.taste(TokenType::Equal)? {
+        let mut initial_value = if self.taste(TokenType::Equal)? {
             self.advance()?; // consume the Equal
-            dbg!(&self.iter);
-            initial_value = Some(self.expression().unwrap())
-        }
+            Some(self.expression().unwrap())
+        } else {
+            None
+        };
 
         if self.eat(TokenType::Semicolon).is_none() {
-            return Err(SyntaxError::ExpectedCharacter(
-                {
-                    match self.prev() {
-                        Some(tok) => String::from(&tok.lexeme),
-                        None => String::from("EOF"),
-                    }
-                },
-                ';',
-            )
+            return Err(SyntaxError::ExpectedCharacter {
+                found: self
+                    .prev()
+                    .map_or_else(|| String::from("EOF"), |tok| String::from(&tok.lexeme)),
+                expected: ';',
+            }
             .into());
         }
 
@@ -110,15 +106,19 @@ impl Parser {
                 match self.step() {
                     Some(tok) => {
                         if tok.token_type != TokenType::Semicolon {
-                            return Err(SyntaxError::ExpectedCharacter(
-                                self.advance()?.lexeme,
-                                ';',
-                            )
+                            return Err(SyntaxError::ExpectedCharacter {
+                                expected: ';',
+                                found: self.advance()?.lexeme,
+                            }
                             .into());
                         }
                         Ok(Stmt::Print(expr))
                     }
-                    None => Err(SyntaxError::ExpectedCharacter(String::from("EOF"), ';').into()),
+                    None => Err(SyntaxError::ExpectedCharacter {
+                        expected: ';',
+                        found: String::from("EOF"),
+                    }
+                    .into()),
                 }
             }
             _ => Ok(Stmt::Expr(self.expression()?)),
@@ -183,15 +183,15 @@ impl Impetuous for Parser {
 
     /// Consumes the next item, verifing that it is the right value
     fn eat(&mut self, expected: TokenType) -> Option<Token> {
-        if matches!(self.iter.peek()?, expected) {
+        if self.iter.peek()?.token_type == expected {
             return Some(self.advance().unwrap());
         }
-        return None;
+        None
     }
 
     /// Peeks the next item, verifing that it is the right value
     fn taste(&mut self, expected: TokenType) -> Result<bool> {
-        Ok(matches!(self.peer()?, expected))
+        Ok(self.peer()?.token_type == expected)
     }
 }
 

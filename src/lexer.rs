@@ -166,9 +166,13 @@ impl<'a> Cursor<'a> {
             match self.iter.next() {
                 Some('"') => break (TokenType::String, chars[1..].iter().collect::<String>()),
                 Some(char) => chars.push(char),
-                None => self
-                    .errors
-                    .push(SyntaxError::ExpectedCharacter(String::from("EOF"), '"').into()),
+                None => self.errors.push(
+                    SyntaxError::ExpectedCharacter {
+                        expected: '"',
+                        found: String::from("EOF"),
+                    }
+                    .into(),
+                ),
             }
         };
 
