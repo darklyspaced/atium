@@ -1,5 +1,7 @@
 use color_eyre::Result;
 
+use crate::token::Token;
+
 /// Extension for the [`Iterator`] trait that provides a bunch of optional nice
 /// to have functions
 pub trait Impetuous: Iterator {
@@ -24,7 +26,7 @@ pub trait Impetuous: Iterator {
     }
 
     /// Consumes the next item, verifing that it is the right value
-    fn eat(&mut self, _expected: Self::Scrutinee) -> Option<bool> {
+    fn eat(&mut self, _expected: Self::Scrutinee) -> Option<Token> {
         unimplemented!()
     }
 

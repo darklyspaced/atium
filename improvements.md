@@ -4,4 +4,3 @@
     - incremental compilation :)
  * split src by '\n', allows for fast relexing
  * map out _specifically_ where Impetuous can be used, and where Iterator must be used
- * make a RichIterator, to make lexing and parsing easier with things like `match` etc 

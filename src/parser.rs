@@ -12,58 +12,9 @@ use super::{
 
 mod expr;
 
-// pub(super) struct Parser {
-//     /// peekable iterator over tokens
-//     pub iter: Peekable<IntoIter<Token>>,
-// }
-
 pub(super) struct Parser {
     iter: Peekable<IntoIter<Token>>,
     prev: Option<Token>,
-}
-
-// make this all generic behaviour that can be overriden if need be.
-impl Impetuous for Parser {
-    type Scrutinee = TokenType;
-    /// Override the `next` function on Iterators, advancing one step forwards
-    fn step(&mut self) -> Option<Token> {
-        self.prev = self.iter.clone().next();
-        self.iter.next()
-    }
-
-    /// Access the element returned last
-    fn prev(&self) -> Option<&Token> {
-        self.prev.as_ref()
-    }
-
-    /// Advance the iterator, erroring if EOF occurs prematurely
-    fn advance(&mut self) -> Result<Token> {
-        self.step().ok_or(SyntaxError::UnexpectedEOF.into())
-    }
-
-    /// Peek the iterator, erroring if EOF occurs early
-    fn peer(&mut self) -> Result<Token> {
-        let mut iter = self.iter.clone();
-        iter.next().ok_or(SyntaxError::UnexpectedEOF.into())
-    }
-
-    /// Consumes the next item, verifing that it is the right value
-    fn eat(&mut self, expected: TokenType) -> Option<bool> {
-        Some(matches!(self.step()?, expected))
-    }
-
-    /// Peeks the next item, verifing that it is the right value
-    fn taste(&mut self, expected: TokenType) -> Result<bool> {
-        Ok(matches!(self.peer()?, expected))
-    }
-}
-
-impl Iterator for Parser {
-    type Item = Token;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next()
-    }
 }
 
 impl Parser {
@@ -79,7 +30,7 @@ impl Parser {
         let mut statements: Vec<Result<Stmt>> = vec![];
 
         while let Some(_) = self.iter.peek() {
-            statements.push(self.statement());
+            statements.push(self.declaration());
         }
 
         if statements.iter().any(result::Result::is_err) {
@@ -93,28 +44,61 @@ impl Parser {
     }
 
     fn declaration(&mut self) -> Result<Stmt> {
-        loop {
-            if self.taste(TokenType::Var).unwrap() {
-                self.advance()?;
-                if let Err(_) = self.var_decl() {
-                    let prev = &self.prev().unwrap().token_type.clone();
-                    self.recover(prev);
-                }
-            } else {
-                if let Err(_) = self.statement() {
-                    let prev = &self.prev().unwrap().token_type.clone();
-                    self.recover(prev);
+        match self.peer().unwrap().token_type {
+            TokenType::Var => {
+                self.advance()?; // consume Var tok
+                match self.var_decl() {
+                    Ok(stmt) => Ok(stmt),
+                    Err(e) => {
+                        let prev = &self.prev().unwrap().token_type.clone();
+                        self.recover(prev);
+                        Err(e)
+                    }
                 }
             }
+            _ => self.statement().map_err(|e| {
+                let prev = &self.prev().unwrap().token_type.clone();
+                self.recover(prev);
+                e
+            }),
         }
     }
 
-    fn var_decl(&mut self) -> Result<()> {
-        if !(self.advance()?.token_type == TokenType::Identifier) {
-            panic!("expected variable name");
+    fn var_decl(&mut self) -> Result<Stmt> {
+        let ident = match self.eat(TokenType::Identifier) {
+            Some(tok) => tok,
+            None => match self.prev() {
+                Some(tok) => {
+                    return Err(SyntaxError::ExpectedIdent(String::from(&tok.lexeme)).into())
+                }
+                None => return Err(SyntaxError::ExpectedIdent(String::from("EOF")).into()),
+            },
+        };
+
+        let mut initial_value = None;
+        if self.taste(TokenType::Equal)? {
+            self.advance()?; // consume the Equal
+            dbg!(&self.iter);
+            initial_value = Some(self.expression().unwrap())
         }
 
-        Ok(())
+        if self.eat(TokenType::Semicolon).is_none() {
+            return Err(SyntaxError::ExpectedCharacter(
+                {
+                    match self.prev() {
+                        Some(tok) => String::from(&tok.lexeme),
+                        None => String::from("EOF"),
+                    }
+                },
+                ';',
+            )
+            .into());
+        }
+
+        Ok(Stmt::Var {
+            name: ident,
+            value: initial_value,
+        })
     }
 
     fn statement(&mut self) -> Result<Stmt> {
@@ -169,6 +153,53 @@ impl Parser {
             }
         }
         Some(())
+    }
+}
+
+// make this all generic behaviour that can be overriden if need be.
+impl Impetuous for Parser {
+    type Scrutinee = TokenType;
+    /// Override the `next` function on Iterators, advancing one step forwards
+    fn step(&mut self) -> Option<Token> {
+        self.prev = self.iter.clone().next();
+        self.iter.next()
+    }
+
+    /// Access the element returned last
+    fn prev(&self) -> Option<&Token> {
+        self.prev.as_ref()
+    }
+
+    /// Advance the iterator, erroring if EOF occurs prematurely
+    fn advance(&mut self) -> Result<Token> {
+        self.step().ok_or(SyntaxError::UnexpectedEOF.into())
+    }
+
+    /// Peek the iterator, erroring if EOF occurs early
+    fn peer(&mut self) -> Result<Token> {
+        let mut iter = self.iter.clone();
+        iter.next().ok_or(SyntaxError::UnexpectedEOF.into())
+    }
+
+    /// Consumes the next item, verifing that it is the right value
+    fn eat(&mut self, expected: TokenType) -> Option<Token> {
+        if matches!(self.iter.peek()?, expected) {
+            return Some(self.advance().unwrap());
+        }
+        return None;
+    }
+
+    /// Peeks the next item, verifing that it is the right value
+    fn taste(&mut self, expected: TokenType) -> Result<bool> {
+        Ok(matches!(self.peer()?, expected))
+    }
+}
+
+impl Iterator for Parser {
+    type Item = Token;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
     }
 }
 

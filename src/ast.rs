@@ -7,10 +7,7 @@ use std::fmt;
 pub enum Stmt {
     Expr(Expr),
     Print(Expr),
-    Var {
-        name: Token,
-        initialiser: Option<Expr>,
-    },
+    Var { name: Token, value: Option<Expr> },
 }
 
 /// An expression: something that can be evalutated and always produces a result

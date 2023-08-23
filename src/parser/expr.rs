@@ -13,6 +13,7 @@ impl Parser {
             TokenType::Number | TokenType::String | TokenType::True | TokenType::False => {
                 Expr::Literal(self.advance()?)
             }
+            TokenType::Identifier => Expr::Variable(self.peer()?),
             TokenType::LeftParen => {
                 self.advance()?; // consume LeftParen
                 let inner = self.expr(0)?;
@@ -30,7 +31,7 @@ impl Parser {
                 let right = self.expr(r_bp)?;
                 Expr::Unary(op, Box::new(right))
             }
-            _ => unimplemented!(),
+            x => unimplemented!("{x:?}"),
         };
 
         loop {
