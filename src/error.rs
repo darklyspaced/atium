@@ -4,7 +4,27 @@ use crate::token::Type;
 use std::{
     fmt,
     fmt::{Debug, Write},
+    fs::File,
 };
+
+pub struct AError<E>
+where
+    E: std::error::Error,
+{
+    kind: E,
+    /// The line and column where the error was generated in the _compiler_
+    #[cfg(debug_assertions)]
+    dbg_span: (u32, u32),
+    /// Information about where the error originates in _source code_
+    span: Span,
+}
+
+struct Span {
+    // Refers to actual byte positions so its easier to work with UTF-8 and non UTF-8
+    lo: u16,
+    hi: u16,
+    file: Option<File>,
+}
 
 /// Error that is generated during the lexing phase of the interpreter.
 #[derive(Error, Debug)]

@@ -44,7 +44,7 @@ impl Parser {
     }
 
     fn declaration(&mut self) -> Result<Stmt> {
-        match self.peer().unwrap().token_type {
+        match self.peer()?.token_type {
             TokenType::Var => {
                 self.advance()?; // consume Var tok
                 match self.var_decl() {
@@ -57,8 +57,9 @@ impl Parser {
                 }
             }
             _ => self.statement().map_err(|e| {
-                let prev = &self.prev().unwrap().token_type.clone();
-                self.recover(prev);
+                if let Some(prev) = &self.prev() {
+                    self.recover(&prev.token_type.clone());
+                }
                 e
             }),
         }
@@ -74,7 +75,7 @@ impl Parser {
             }
         };
 
-        let mut initial_value = if self.taste(TokenType::Equal)? {
+        let initial_value = if self.taste(TokenType::Equal)? {
             self.advance()?; // consume the Equal
             Some(self.expression().unwrap())
         } else {
