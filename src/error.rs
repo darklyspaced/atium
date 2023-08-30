@@ -2,28 +2,80 @@ use thiserror::Error;
 
 use crate::token::Type;
 use std::{
+    error::Error,
     fmt,
     fmt::{Debug, Write},
-    fs::File,
 };
 
-pub struct AError<E>
-where
-    E: std::error::Error,
-{
-    kind: E,
-    /// The line and column where the error was generated in the _compiler_
-    #[cfg(debug_assertions)]
-    dbg_span: (u32, u32),
-    /// Information about where the error originates in _source code_
-    span: Span,
+#[macro_export]
+macro_rules! dump {
+    ($kind:expr) => {{
+        Err($crate::error::AError {
+            kind: $kind,
+            #[cfg(debug_assertions)]
+            dbg_span: $crate::error::DbgSpan::new(::std::file!(), ::std::line!(), ::std::column!()),
+            span: $crate::error::Span {
+                lo: 0,
+                hi: 0,
+            } // placeholder until Span is in lexer and is propagated
+        }.into())
+    }}
 }
 
-struct Span {
+impl<E> fmt::Display for AError<E>
+where
+    E: Error,
+{
+    #[cfg(debug_assertions)]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "[{}:{}:{}] {}",
+            self.dbg_span.file, self.dbg_span.line, self.dbg_span.column, self.kind
+        )
+    }
+    #[cfg(not(debug_assertions))]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", &self)
+    }
+}
+
+#[derive(Error, Debug)]
+pub struct AError<E>
+where
+    E: Error,
+{
+    #[source]
+    pub kind: E,
+    /// The line and column where the error was generated in the _compiler_
+    #[cfg(debug_assertions)]
+    pub dbg_span: DbgSpan,
+    /// Information about where the error originates in _source code_
+    pub span: Span,
+}
+
+#[derive(Debug)]
+pub struct Span {
     // Refers to actual byte positions so its easier to work with UTF-8 and non UTF-8
-    lo: u16,
-    hi: u16,
-    file: Option<File>,
+    pub lo: u16,
+    pub hi: u16,
+}
+
+#[derive(Debug)]
+pub struct DbgSpan {
+    file: String,
+    line: u32,
+    column: u32,
+}
+
+impl DbgSpan {
+    pub fn new(file: &str, line: u32, column: u32) -> Self {
+        Self {
+            file: file.to_string(),
+            line,
+            column,
+        }
+    }
 }
 
 /// Error that is generated during the lexing phase of the interpreter.

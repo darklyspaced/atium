@@ -2,7 +2,7 @@ use std::{iter::Peekable, result, vec::IntoIter};
 
 use color_eyre::Result;
 
-use crate::error::SyntaxError;
+use crate::{dump, error::SyntaxError};
 
 use super::{
     ast::Stmt,
@@ -71,7 +71,8 @@ impl Parser {
                 Some(tok) => {
                     return Err(SyntaxError::ExpectedIdent(String::from(&tok.lexeme)).into())
                 }
-                None => return Err(SyntaxError::ExpectedIdent(String::from("EOF")).into()),
+                None => return dump!(SyntaxError::ExpectedIdent(String::from("EOF"))),
+                // None => return Err(SyntaxError::ExpectedIdent(String::from("EOF")).into()),
             }
         };
 
