@@ -25,7 +25,7 @@ pub fn run_file(file: &str) -> Result<()> {
     let mut f_handle = BufReader::new(f_handle);
     f_handle.read_to_string(&mut buf)?;
 
-    if let Err(errs) = run(&buf) {
+    if let Err(errs) = run(&buf, Some(file)) {
         report(&errs);
     }
     Ok(())
@@ -43,7 +43,7 @@ pub fn run_repl() -> Result<()> {
     let mut input = stdin().lock();
     let mut buf = String::new();
     while input.read_line(&mut buf)? != 0 {
-        if let Err(errs) = run(&buf) {
+        if let Err(errs) = run(&buf, None) {
             report(&errs);
         }
         buf.clear();
@@ -51,8 +51,8 @@ pub fn run_repl() -> Result<()> {
     Ok(())
 }
 
-fn run(src: &str) -> Result<(), Vec<Report>> {
-    let atium = Atium::new(src);
+fn run(src: &str, file: Option<&str>) -> Result<(), Vec<Report>> {
+    let atium = Atium::new(src, file);
     atium.lex()?.parse()?.interpret()?;
     Ok(())
 }

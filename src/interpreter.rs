@@ -1,8 +1,11 @@
-use super::ast::{Expr, Stmt};
-use super::error::RuntimeError;
-use super::token::{TokenType, Type, Value};
-
 use color_eyre::{Report, Result};
+
+use crate::{
+    ast::{Expr, Stmt},
+    dump,
+    error::RuntimeError,
+    token::{TokenKind, Type, Value},
+};
 
 pub(super) struct Interpreter {
     stmts: Vec<Stmt>,
@@ -33,65 +36,66 @@ fn expression(expr: Expr) -> Result<Value> {
         Expr::Unary(op, expr) => {
             let expr = expression(*expr)?;
 
-            match op.token_type {
-                TokenType::Minus => match expr {
+            match op.kind {
+                TokenKind::Minus => match expr {
                     Value::Integer(a) => Ok(Value::Integer(-a)),
-                    _ => Err(
-                        RuntimeError::InvalidType::<&str>(expr.into(), vec![Type::Integer]).into(),
-                    ),
+                    _ => dump!(RuntimeError::InvalidType::<&str>(
+                        expr.into(),
+                        vec![Type::Integer]
+                    )),
                 },
-                TokenType::Bang => match expr {
+                TokenKind::Bang => match expr {
                     Value::Boolean(a) => Ok(Value::Boolean(!a)),
-                    _ => Err(
-                        RuntimeError::InvalidType::<&str>(expr.into(), vec![Type::Boolean]).into(),
-                    ),
+                    _ => dump!(RuntimeError::InvalidType::<&str>(
+                        expr.into(),
+                        vec![Type::Boolean]
+                    )),
                 },
-                _ => Err(RuntimeError::InvalidOperator(op.lexeme, vec!['-', '!']).into()),
+                _ => dump!(RuntimeError::InvalidOperator(op.lex(), vec!['-', '!'])),
             }
         }
         Expr::Binary(left, op, right) => {
             let left = expression(*left)?;
             let right = expression(*right)?;
 
-            match op.token_type {
-                TokenType::Slash => match (&left, &right) {
+            match op.kind {
+                TokenKind::Slash => match (&left, &right) {
                     (Value::Integer(a), Value::Integer(b)) => Ok((a / b).into()),
-                    _ => Err(RuntimeError::InvalidTypes(
-                        op.lexeme,
+                    _ => dump!(RuntimeError::InvalidTypes(
+                        op.lex(),
                         vec![left.into(), right.into()],
                         vec![(Type::Integer, Type::Integer)],
-                    )
-                    .into()),
+                    )),
                 },
-                TokenType::Minus => match (&left, &right) {
+                TokenKind::Minus => match (&left, &right) {
                     (Value::Integer(a), Value::Integer(b)) => Ok((a - b).into()),
-                    _ => Err(RuntimeError::InvalidTypes(
-                        op.lexeme,
+                    _ => dump!(RuntimeError::InvalidTypes(
+                        op.lex(),
                         vec![left.into(), right.into()],
                         vec![(Type::Integer, Type::Integer)],
-                    )
-                    .into()),
+                    )),
                 },
-                TokenType::Star => match (&left, &right) {
+                TokenKind::Star => match (&left, &right) {
                     (Value::Integer(a), Value::Integer(b)) => Ok((a * b).into()),
-                    _ => Err(RuntimeError::InvalidTypes(
-                        op.lexeme,
+                    _ => dump!(RuntimeError::InvalidTypes(
+                        op.lex(),
                         vec![left.into(), right.into()],
                         vec![(Type::Integer, Type::Integer)],
-                    )
-                    .into()),
+                    )),
                 },
-                TokenType::Plus => match (&left, &right) {
+                TokenKind::Plus => match (&left, &right) {
                     (Value::Integer(a), Value::Integer(b)) => Ok((a + b).into()),
                     (Value::String(a), Value::String(b)) => Ok(format!("{a}{b}").into()),
-                    _ => Err(RuntimeError::InvalidTypes(
-                        op.lexeme,
+                    _ => dump!(RuntimeError::InvalidTypes(
+                        op.lex(),
                         vec![left.into(), right.into()],
                         vec![(Type::Integer, Type::Integer), (Type::String, Type::String)],
-                    )
-                    .into()),
+                    )),
                 },
-                _ => Err(RuntimeError::InvalidOperator(op.lexeme, vec!['+', '/', '-', '*']).into()),
+                _ => dump!(RuntimeError::InvalidOperator(
+                    op.lex(),
+                    vec!['+', '/', '-', '*']
+                )),
             }
         }
         _ => unimplemented!(),

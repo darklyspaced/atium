@@ -1,7 +1,7 @@
 use color_eyre::Result;
 
 use super::Parser;
-use crate::{ast::Expr, error::SyntaxError, impetuous::Impetuous, token::TokenType};
+use crate::{ast::Expr, error::SyntaxError, impetuous::Impetuous, token::TokenKind};
 
 impl Parser {
     pub fn expression(&mut self) -> Result<Expr> {
@@ -9,19 +9,19 @@ impl Parser {
     }
 
     fn expr(&mut self, min_bp: u8) -> Result<Expr> {
-        let mut left = match self.peer()?.token_type {
-            TokenType::Number | TokenType::String | TokenType::True | TokenType::False => {
+        let mut left = match self.peer()?.kind {
+            TokenKind::Number | TokenKind::String | TokenKind::True | TokenKind::False => {
                 Expr::Literal(self.advance()?)
             }
-            TokenType::Identifier => Expr::Variable(self.peer()?),
-            TokenType::LeftParen => {
+            TokenKind::Identifier => Expr::Variable(self.peer()?),
+            TokenKind::LeftParen => {
                 self.advance()?; // consume LeftParen
                 let inner = self.expr(0)?;
 
-                if self.peer()?.token_type != TokenType::RightParen {
+                if self.peer()?.kind != TokenKind::RightParen {
                     return Err(SyntaxError::ExpectedCharacter {
                         expected: ')',
-                        found: self.advance()?.lexeme,
+                        found: self.advance()?.span.lex,
                     }
                     .into());
                 }
@@ -29,9 +29,9 @@ impl Parser {
 
                 Expr::Grouping(Box::new(inner))
             }
-            TokenType::Minus | TokenType::Bang => {
+            TokenKind::Minus | TokenKind::Bang => {
                 let op = self.advance()?;
-                let (_, r_bp) = prefix_bp(&op.token_type);
+                let (_, r_bp) = prefix_bp(&op.kind);
                 let right = self.expr(r_bp)?;
                 Expr::Unary(op, Box::new(right))
             }
@@ -39,7 +39,7 @@ impl Parser {
         };
 
         while let Some(op) = self.iter.peek() {
-            if let Some((l_bp, r_bp)) = infix_bp(&op.token_type) {
+            if let Some((l_bp, r_bp)) = infix_bp(&op.kind) {
                 if l_bp < min_bp {
                     break;
                 }
@@ -59,11 +59,11 @@ impl Parser {
 }
 
 /// Returns the binding power for an infix operator
-fn infix_bp(op: &TokenType) -> Option<(u8, u8)> {
+fn infix_bp(op: &TokenKind) -> Option<(u8, u8)> {
     let bp = match op {
-        TokenType::EqualEqual => (2, 1),
-        TokenType::Plus | TokenType::Minus => (3, 4),
-        TokenType::Star | TokenType::Slash => (5, 6),
+        TokenKind::EqualEqual => (2, 1),
+        TokenKind::Plus | TokenKind::Minus => (3, 4),
+        TokenKind::Star | TokenKind::Slash => (5, 6),
         _ => return None,
     };
 
@@ -71,9 +71,9 @@ fn infix_bp(op: &TokenType) -> Option<(u8, u8)> {
 }
 
 /// Returns the binding power of a prefix operator
-fn prefix_bp(op: &TokenType) -> ((), u8) {
+fn prefix_bp(op: &TokenKind) -> ((), u8) {
     match op {
-        TokenType::Minus | TokenType::Bang => ((), 7),
+        TokenKind::Minus | TokenKind::Bang => ((), 7),
         _ => panic!("bad op: {:?}", op),
     }
 }
