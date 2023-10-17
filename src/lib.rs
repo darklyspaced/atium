@@ -14,6 +14,7 @@
 pub mod ast;
 pub mod atium;
 pub mod cli;
+pub mod environment;
 pub mod error;
 pub mod impetuous;
 pub mod interpreter;

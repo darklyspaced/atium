@@ -67,7 +67,7 @@ impl Parser {
 
     fn var_decl(&mut self) -> Result<Stmt> {
         let Some(ident) = self.eat(TokenKind::Identifier) else {
-            match self.prev() {
+            match self.next() {
                 Some(tok) => dump!(SyntaxError::ExpectedIdent(String::from(&tok.lex()))),
                 None => dump!(SyntaxError::ExpectedIdent(String::from("EOF"))),
             }
@@ -155,7 +155,8 @@ impl Parser {
 // make this all generic behaviour that can be overriden if need be.
 impl Impetuous for Parser {
     type Scrutinee = TokenKind;
-    /// Override the `next` function on Iterators, advancing one step forwards
+    /// Replaces the `next` function on Iterators, advancing one step forwards while keeping track
+    /// of the previous elem
     fn step(&mut self) -> Option<Token> {
         self.prev = self.iter.clone().next();
         self.iter.next()
@@ -178,6 +179,8 @@ impl Impetuous for Parser {
     }
 
     /// Consumes the next item, verifing that it is the right value
+    ///
+    /// Does not advance the underlying iterator if predicate not fulfilled
     fn eat(&mut self, expected: TokenKind) -> Option<Token> {
         if self.iter.peek()?.kind == expected {
             return Some(self.advance().unwrap());

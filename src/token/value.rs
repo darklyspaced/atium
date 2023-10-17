@@ -11,17 +11,17 @@ macro_rules! impl_from {
     };
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
+#[derive(Hash, Deserialize, Serialize, Debug, PartialEq, Clone, Eq)]
 pub enum Value {
     String(String),
     Integer(i128),
-    Float(f64),
+    Float(ordered_float::OrderedFloat<f64>),
     Boolean(bool),
     Null,
 }
 
 impl_from!(Value::Integer; i128; u8, u16, u32, u64, i8, i16, i32, i64, i128);
-impl_from!(Value::Float; f64; f32, f64);
+// TODO: make a custom impl from f32 and f64 to OrderedFloat<f64>
 impl_from!(Value::String; String; String);
 impl_from!(Value::Boolean; bool; bool);
 

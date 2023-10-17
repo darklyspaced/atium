@@ -179,7 +179,9 @@ impl<'a> Cursor<'a> {
             self.add_token(
                 TokenKind::Number,
                 lexeme,
-                Some(Value::Float(pre_literal.parse::<f64>().unwrap())),
+                Some(Value::Float(ordered_float::OrderedFloat(
+                    pre_literal.parse::<f64>().unwrap(),
+                ))),
             );
         } else {
             self.add_token(

@@ -1,6 +1,10 @@
 use serde::{Deserialize, Serialize};
 
-use std::{fmt, fmt::Display};
+use std::{
+    fmt,
+    fmt::Display,
+    hash::{Hash, Hasher},
+};
 
 pub use self::{r#type::Type, value::Value};
 use crate::error::Span;
@@ -9,7 +13,7 @@ pub mod r#type;
 pub mod value;
 
 /// A token
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, Eq)]
 pub struct Token {
     /// The type of token
     pub kind: TokenKind,
@@ -40,7 +44,34 @@ impl Display for Token {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+/// Only lexeme and kind must be used in hash function. Span is different for each token as they
+/// all appear in different places in source.
+impl Hash for Token {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.kind.hash(state);
+        self.lex().hash(state);
+    }
+}
+
+impl PartialEq for Token {
+    fn eq(&self, other: &Self) -> bool {
+        if self.kind == other.kind && self.lex() == other.lex() {
+            true
+        } else {
+            false
+        }
+    }
+
+    fn ne(&self, other: &Self) -> bool {
+        if self.kind != other.kind || self.lex() != other.lex() {
+            true
+        } else {
+            false
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TokenKind {
     // Single-character tokens.
     LeftParen,

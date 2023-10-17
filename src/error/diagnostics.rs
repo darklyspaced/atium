@@ -3,10 +3,10 @@ use serde::{Deserialize, Serialize};
 
 use std::{fmt::Display, path::PathBuf};
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Debug, Hash, Serialize, Deserialize, PartialEq, Clone, Eq)]
 pub struct Line(pub u32);
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Debug, Hash, Serialize, Deserialize, PartialEq, Clone, Eq)]
 pub struct Column(pub u32);
 
 impl Display for Line {
@@ -21,7 +21,7 @@ impl Display for Column {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Hash, Eq)]
 pub struct Span {
     pub line: Line,
     pub column: Column,

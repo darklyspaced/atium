@@ -55,14 +55,11 @@ impl<'a> Atium<'a, Lexing> {
 
 impl<'a> Atium<'a, Parsing> {
     pub fn parse(mut self) -> AResult<'a, Interpreting> {
-        self.parser.parse().map(|ok| {
-            println!("{}", serde_json::to_string_pretty(&ok).unwrap());
-            Atium {
-                state: PhantomData::<Interpreting>,
-                interpeter: Interpreter::new(ok),
-                parser: Parser::new(vec![]),
-                cursor: Cursor::new::<&str>("", None),
-            }
+        self.parser.parse().map(|ok| Atium {
+            state: PhantomData::<Interpreting>,
+            interpeter: Interpreter::new(ok),
+            parser: Parser::new(vec![]),
+            cursor: Cursor::new::<&str>("", None),
         })
     }
 }

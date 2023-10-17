@@ -10,7 +10,7 @@ pub enum Stmt {
     Var { name: Token, value: Option<Expr> },
 }
 
-/// An expression: something that can be evalutated and always produces a result
+/// An expression: something that can be evaluated to produce a side effect
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Expr {
     Binary(Box<Expr>, Token, Box<Expr>),

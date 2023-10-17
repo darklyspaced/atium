@@ -13,7 +13,7 @@ impl Parser {
             TokenKind::Number | TokenKind::String | TokenKind::True | TokenKind::False => {
                 Expr::Literal(self.advance()?)
             }
-            TokenKind::Identifier => Expr::Variable(self.peer()?),
+            TokenKind::Identifier => Expr::Variable(self.advance()?),
             TokenKind::LeftParen => {
                 self.advance()?; // consume LeftParen
                 let inner = self.expr(0)?;
@@ -48,10 +48,9 @@ impl Parser {
                 let right = self.expr(r_bp)?;
 
                 left = Expr::Binary(Box::new(left), op, Box::new(right));
-                continue;
+            } else {
+                break;
             }
-
-            break;
         }
 
         Ok(left)

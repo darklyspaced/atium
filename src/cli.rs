@@ -32,7 +32,6 @@ pub fn run_file(file: &str) -> Result<()> {
 }
 
 fn report(errors: &[Report]) {
-    println!("there was an error!");
     for err in errors {
         eprintln!("{err}");
     }

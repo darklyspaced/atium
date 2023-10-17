@@ -8,7 +8,7 @@ use std::{
 };
 
 pub use self::diagnostics::{Column, Line, Span};
-use crate::token::Type;
+use crate::token::{Token, Type};
 
 pub mod diagnostics;
 
@@ -40,7 +40,7 @@ macro_rules! dump {
 ///     --> bar.as:26:4
 ///      |
 ///   26 | foo.frobnicate();
-///      |     ^^^^^^^^^^ methods doesn't exist
+///      |     ^^^^^^^^^^ method doesn't exist
 ///      |
 ///
 /// Or if compiled with debug assertions:
@@ -50,7 +50,7 @@ macro_rules! dump {
 ///     --> bar.as:26:4
 ///      |
 ///   26 | foo.frobnicate();
-///      |     ^^^^^^^^^^ methods doesn't exist
+///      |     ^^^^^^^^^^ method doesn't exist
 ///      |
 ///
 impl<E> fmt::Display for Diagnostic<E>
@@ -97,7 +97,7 @@ pub enum SyntaxError {
     #[error("expected '{expected}' but found '{found}'")]
     ExpectedCharacter { found: String, expected: char },
 
-    #[error("expected: identifier but found: {0}")]
+    #[error("expected identifier but found {0}")]
     ExpectedIdent(String),
 
     /// EOF was found in an unexpected place. don't know what was expected instead of it
@@ -115,6 +115,12 @@ pub enum RuntimeError<D: Debug> {
 
     #[error("cannot apply '{0}' to values ({}), expected: {}", display_vec(.1), display_tuple_vec(.2))]
     InvalidTypes(D, Vec<Type>, Vec<(Type, Type)>),
+
+    #[error("invalid identifier, please define {0} before use")]
+    InvalidIdent(D),
+
+    #[error("uninitialised variable, please initialise {0} before use")]
+    UninitialisedVar(D),
 }
 
 fn display_vec<T: fmt::Debug>(vec: &[T]) -> String {
