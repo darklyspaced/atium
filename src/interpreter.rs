@@ -1,4 +1,5 @@
 use color_eyre::{Report, Result};
+use std::cell::RefCell;
 
 use crate::{
     ast::{Expr, Stmt},
@@ -10,53 +11,54 @@ use crate::{
 
 pub(super) struct Interpreter {
     stmts: Vec<Stmt>,
-    env: Env,
+    env: RefCell<Env>,
 }
 
 impl Interpreter {
     pub fn new(stmts: Vec<Stmt>) -> Self {
         Self {
             stmts,
-            env: Env::new(),
+            env: RefCell::new(Env::new()),
         }
     }
 
-    pub fn interpret(mut self) -> Result<(), Vec<Report>> {
+    pub fn interpret(self) -> Result<(), Vec<Report>> {
         let mut errors = Vec::new();
         for stmt in &self.stmts {
             match stmt {
-                // TODO: stop throwing standalone `Expr` into the void and actually _do_ something
+                // TODO stop throwing standalone `Expr` into the void and actually _do_ something
                 // with them
                 Stmt::Expr(expr) => errors.push(self.expression(expr).err()),
                 Stmt::Print(expr) => errors.push(self.print(expr).err()),
                 Stmt::Var { name, value } => {
                     if let Some(expr) = value {
                         match self.expression(expr) {
-                            // NOTE: notice how this allows variable shadowing as we don't check if
+                            // NOTE notice how this allows variable shadowing as we don't check if
                             // variables already exist before 'defining' them.
-                            Ok(val) => self.env.define(name.to_owned(), Some(val)),
+                            Ok(val) => self.def_var(name.to_owned(), Some(val)),
                             Err(e) => errors.push(Some(e)),
                         }
                     } else {
-                        self.env.define(name.to_owned(), None)
+                        self.def_var(name.to_owned(), None)
                     }
                 }
-                _ => unimplemented!(), // TODO: prevent errors when implementing new `Stmt`; remove
             };
         }
         Err(errors.into_iter().flatten().collect())
     }
 
     fn get_var(&self, ident: &Token) -> Result<Value> {
-        dbg!(&self.env);
-        dbg!(ident);
-        match self.env.get(ident) {
+        match self.env.borrow_mut().get(ident) {
             Some(val) => match val {
                 Some(val) => Ok(val.clone()),
                 None => dump!(RuntimeError::UninitialisedVar(ident.lex())),
             },
             None => dump!(RuntimeError::InvalidIdent(ident.lex())),
         }
+    }
+
+    fn def_var(&self, ident: Token, value: Option<Value>) {
+        self.env.borrow_mut().define(ident, value);
     }
 
     /// Interpret and expression, either producing a value or an error than occurred during the
@@ -66,6 +68,10 @@ impl Interpreter {
             Expr::Literal(lit) => Ok(lit.literal.clone().unwrap()),
             Expr::Grouping(expr) => self.expression(expr),
             Expr::Variable(ident) => self.get_var(ident),
+            Expr::Assignment(ident, val) => self
+                .env
+                .borrow_mut()
+                .assign(ident.clone(), self.expression(val)?),
             Expr::Unary(op, expr) => {
                 let expr = self.expression(expr)?;
 
@@ -130,10 +136,6 @@ impl Interpreter {
                         vec!['+', '/', '-', '*']
                     )),
                 }
-            }
-            _ => {
-                dbg!(expr);
-                unimplemented!()
             }
         }
     }

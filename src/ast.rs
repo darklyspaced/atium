@@ -17,6 +17,7 @@ pub enum Expr {
     Grouping(Box<Expr>),
     Literal(Token),
     Unary(Token, Box<Expr>),
+    Assignment(Token, Box<Expr>),
     Variable(Token),
 }
 
@@ -30,6 +31,7 @@ impl fmt::Display for Expr {
             Self::Literal(lit) => write!(f, "{lit}"),
             Self::Grouping(expr) => write!(f, "[{expr}]"),
             Self::Variable(tok) => write!(f, "{tok}"),
+            Self::Assignment(tok, expr) => write!(f, "{expr} -> {tok}"),
         }
     }
 }

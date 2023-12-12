@@ -8,7 +8,7 @@ use std::{
 };
 
 pub use self::diagnostics::{Column, Line, Span};
-use crate::token::{Token, Type};
+use crate::token::Type;
 
 pub mod diagnostics;
 
@@ -121,6 +121,9 @@ pub enum RuntimeError<D: Debug> {
 
     #[error("uninitialised variable, please initialise {0} before use")]
     UninitialisedVar(D),
+
+    #[error("invalid assignment target")]
+    InvalidAssignmentTarget,
 }
 
 fn display_vec<T: fmt::Debug>(vec: &[T]) -> String {

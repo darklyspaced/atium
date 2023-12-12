@@ -1,3 +1,7 @@
+use std::any::Any;
+
+use crate::dump;
+use crate::error::RuntimeError;
 use color_eyre::Result;
 
 use super::Parser;
@@ -13,7 +17,8 @@ impl Parser {
             TokenKind::Number | TokenKind::String | TokenKind::True | TokenKind::False => {
                 Expr::Literal(self.advance()?)
             }
-            TokenKind::Identifier => Expr::Variable(self.advance()?),
+            TokenKind::Identifier => Expr::Variable(self.advance()?), // NOTE variables are not
+            // only one character
             TokenKind::LeftParen => {
                 self.advance()?; // consume LeftParen
                 let inner = self.expr(0)?;
@@ -35,7 +40,10 @@ impl Parser {
                 let right = self.expr(r_bp)?;
                 Expr::Unary(op, Box::new(right))
             }
-            x => unimplemented!("{x:?}"),
+            x => {
+                dbg!(&self.iter);
+                unimplemented!("{x:?}")
+            }
         };
 
         while let Some(op) = self.iter.peek() {
@@ -47,7 +55,16 @@ impl Parser {
                 let op = self.advance()?; // consume operator
                 let right = self.expr(r_bp)?;
 
-                left = Expr::Binary(Box::new(left), op, Box::new(right));
+                left = match op.kind {
+                    TokenKind::Equal => {
+                        if let Expr::Variable(name) = left {
+                            Expr::Assignment(name, Box::new(right))
+                        } else {
+                            dump!(RuntimeError::InvalidAssignmentTarget::<String>)
+                        }
+                    }
+                    _ => Expr::Binary(Box::new(left), op, Box::new(right)),
+                };
             } else {
                 break;
             }
@@ -60,9 +77,10 @@ impl Parser {
 /// Returns the binding power for an infix operator
 fn infix_bp(op: &TokenKind) -> Option<(u8, u8)> {
     let bp = match op {
-        TokenKind::EqualEqual => (2, 1),
-        TokenKind::Plus | TokenKind::Minus => (3, 4),
-        TokenKind::Star | TokenKind::Slash => (5, 6),
+        TokenKind::Equal => (2, 1),
+        TokenKind::EqualEqual => (4, 3),
+        TokenKind::Plus | TokenKind::Minus => (5, 6),
+        TokenKind::Star | TokenKind::Slash => (7, 8),
         _ => return None,
     };
 
