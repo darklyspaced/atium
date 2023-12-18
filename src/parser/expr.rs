@@ -1,5 +1,3 @@
-use std::any::Any;
-
 use crate::dump;
 use crate::error::RuntimeError;
 use color_eyre::Result;

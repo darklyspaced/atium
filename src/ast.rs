@@ -7,6 +7,7 @@ use std::fmt;
 pub enum Stmt {
     Expr(Expr),
     Print(Expr),
+    Block(Vec<Stmt>),
     Var { name: Token, value: Option<Expr> },
 }
 

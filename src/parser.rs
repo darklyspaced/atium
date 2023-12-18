@@ -98,7 +98,7 @@ impl Parser {
     fn statement(&mut self) -> Result<Stmt> {
         match self.peer()?.kind {
             TokenKind::Print => {
-                self.advance()?; // consume the print token
+                self.eat(TokenKind::Print).unwrap();
                 let expr = self.expression()?;
 
                 match self.step() {
@@ -114,6 +114,28 @@ impl Parser {
                     None => dump!(SyntaxError::ExpectedCharacter {
                         expected: ';',
                         found: String::from("EOF"),
+                    }),
+                }
+            }
+            TokenKind::LeftBrace => {
+                let mut stmts = vec![];
+                self.eat(TokenKind::LeftBrace).unwrap();
+
+                while let Ok(false) = self.taste(TokenKind::RightBrace) {
+                    stmts.push(self.declaration()?)
+                }
+
+                match self.step() {
+                    Some(tok) => match tok.kind {
+                        TokenKind::RightBrace => Ok(Stmt::Block(stmts)),
+                        _ => dump!(SyntaxError::ExpectedCharacter {
+                            expected: '}',
+                            found: tok.lex()
+                        }),
+                    },
+                    None => dump!(SyntaxError::ExpectedCharacter {
+                        expected: '}',
+                        found: String::from("EOF")
                     }),
                 }
             }

@@ -55,19 +55,7 @@ impl Hash for Token {
 
 impl PartialEq for Token {
     fn eq(&self, other: &Self) -> bool {
-        if self.kind == other.kind && self.lex() == other.lex() {
-            true
-        } else {
-            false
-        }
-    }
-
-    fn ne(&self, other: &Self) -> bool {
-        if self.kind != other.kind || self.lex() != other.lex() {
-            true
-        } else {
-            false
-        }
+        self.kind == other.kind && self.lex() == other.lex()
     }
 }
 

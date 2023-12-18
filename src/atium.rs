@@ -1,5 +1,5 @@
 use crate::{interpreter::Interpreter, lexer::Cursor, parser::Parser};
-use std::{marker::PhantomData, path::Path};
+use std::marker::PhantomData;
 
 use color_eyre::{Report, Result};
 
